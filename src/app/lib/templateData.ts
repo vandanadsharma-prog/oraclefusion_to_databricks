@@ -149,7 +149,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           ...defaultStatus,
           label: 'Oracle Fusion',
           nodeType: 'oracle-fusion',
-          subtitle: 'localhost:8000/fscmRestApi',
+          subtitle: 'localhost:9000/fscmRestApi',
           config: {
             host: 'localhost', port: '8000', serviceName: 'ORCLPDB1',
             username: 'FUSION_USER', password: '••••••••',
@@ -167,7 +167,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           nodeType: 'rest-api',
           subtitle: 'Paginated – OAuth2',
           config: {
-            endpoint: 'http://localhost:8000/fscmRestApi/resources/11.13.18.05/invoices',
+            endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices',
             authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '••••••••',
             pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01',
           },

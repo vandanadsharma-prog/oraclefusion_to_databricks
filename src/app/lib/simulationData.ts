@@ -49,7 +49,7 @@ export const SIMULATIONS: Record<PipelineType, SimulationStep[]> = {
 
   'rest-api': [
     { delayMs: 400, updateNodeType: 'oracle-fusion', nodeStatus: 'running', progress: 2, log: { level: 'info', message: '[START]   Initializing mock Oracle Fusion REST API server (FastAPI)...' } },
-    { delayMs: 700, progress: 6, log: { level: 'info', message: '  Server starting at http://localhost:8000/fscmRestApi' } },
+    { delayMs: 700, progress: 6, log: { level: 'info', message: '  Server starting at http://localhost:9000/fscmRestApi' } },
     { delayMs: 600, progress: 10, log: { level: 'success', message: '  Mock server ready. Routes: /invoices, /suppliers, /purchaseOrders' } },
     { delayMs: 500, updateNodeType: 'oracle-fusion', nodeStatus: 'success', progress: 14, log: { level: 'info', message: '[AUTH]    Acquiring OAuth2 Bearer token from identity provider...' } },
     { delayMs: 600, updateNodeType: 'rest-api', nodeStatus: 'running', progress: 18, log: { level: 'success', message: '  Token acquired (expires: 3600s). Scope: FscmRestApi.all' } },

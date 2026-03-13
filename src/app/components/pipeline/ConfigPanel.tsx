@@ -167,7 +167,7 @@ function RestApiConfig({ config, onChange }: { config: NodeConfig; onChange: (c:
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <Section title="Endpoint" />
-      <Field label="API Base URL" value={config.endpoint} onChange={(v) => onChange({ endpoint: v })} placeholder="http://localhost:8000/fscmRestApi/..." />
+      <Field label="API Base URL" value={config.endpoint} onChange={(v) => onChange({ endpoint: v })} placeholder="http://localhost:9000/fscmRestApi/..." />
       <Section title="Authentication" />
       <SelectField label="Auth Type" value={config.authType} onChange={(v) => onChange({ authType: v as 'oauth2' | 'basic' | 'bearer' })}
         options={[{ value: 'oauth2', label: 'OAuth2 (Client Credentials)' }, { value: 'bearer', label: 'Bearer Token' }, { value: 'basic', label: 'Basic Auth' }]} />
