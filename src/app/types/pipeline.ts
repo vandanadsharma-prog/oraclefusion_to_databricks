@@ -87,17 +87,6 @@ export interface ExecutionSummary {
   pipelineType: PipelineType;
 }
 
-export interface SimulationStep {
-  delayMs: number;
-  updateNodeType?: NodeType;
-  nodeStatus?: NodeStatus;
-  progress: number;
-  log?: {
-    level: LogLevel;
-    message: string;
-  };
-}
-
 export const NODE_META: Record<NodeType, { label: string; subtitle: string; color: string; bgColor: string; textColor: string }> = {
   'oracle-fusion': {
     label: 'Oracle Fusion',

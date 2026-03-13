@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useStore } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import { CheckCircle2, XCircle, Loader2, Circle, X } from 'lucide-react';
+import { Check, CheckCircle2, XCircle, Loader2, Circle, X } from 'lucide-react';
 import type { PipelineNodeData, NodeStatus } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
 import { BRAND_LOGOS } from './BrandLogos';
@@ -28,13 +28,19 @@ function StatusBadge({ status }: { status: NodeStatus }) {
 }
 
 function PipelineNode({
-  data, selected, isSource, isTarget,
+  id, data, selected, isSource, isTarget,
 }: NodeProps<PipelineNodeData> & { isSource?: boolean; isTarget?: boolean }) {
   const meta = NODE_META[data.nodeType];
   const Logo = BRAND_LOGOS[data.nodeType];
   const isRunning = data.status === 'running';
   const isSuccess = data.status === 'success';
   const isError = data.status === 'error';
+  const isConnected = useStore((state: any) =>
+    (state.edges ?? []).some((e: any) => e.source === id || e.target === id)
+  );
+  const isDisconnected = !isConnected;
+  const showDisconnectedStyle = isError || isDisconnected;
+  const showConnectedTick = isConnected && !isError;
 
   const tradeoff = useMemo(() => TRADEOFFS_BY_NODE_TYPE[data.nodeType], [data.nodeType]);
   const [showTradeoff, setShowTradeoff] = useState(false);
@@ -70,16 +76,21 @@ function PipelineNode({
   }, [selected, tradeoff, openTradeoff, clearHideTimer]);
 
   let borderColor = '#e2e8f0';
-  if (selected) borderColor = meta.color;
+  if (showDisconnectedStyle) borderColor = '#ef4444';
+  else if (selected) borderColor = meta.color;
   else if (isRunning) borderColor = meta.color;
   else if (isSuccess) borderColor = '#16a34a';
-  else if (isError) borderColor = '#dc2626';
+
+  const boxBg = showDisconnectedStyle ? '#fff7ed' : '#f0fdf4';
+  const headerBg = showDisconnectedStyle ? '#ffedd5' : '#dcfce7';
+  const topAccent = showDisconnectedStyle ? '#ef4444' : meta.color;
+  const handleBorder = showDisconnectedStyle ? '#ef4444' : meta.color;
 
   const boxStyle: React.CSSProperties = {
     width: '220px',
-    backgroundColor: '#ffffff',
+    backgroundColor: boxBg,
     border: `1.5px solid ${borderColor}`,
-    borderTop: `3px solid ${meta.color}`,
+    borderTop: `3px solid ${topAccent}`,
     borderRadius: '6px',
     boxShadow: selected
       ? `0 4px 16px ${meta.color}28, 0 1px 4px rgba(0,0,0,0.10)`
@@ -107,8 +118,8 @@ function PipelineNode({
       {/* Header */}
       <div
         style={{
-          backgroundColor: meta.bgColor,
-          borderBottom: `1px solid ${meta.color}22`,
+          backgroundColor: headerBg,
+          borderBottom: showDisconnectedStyle ? '1px solid #fecaca' : `1px solid ${meta.color}22`,
           padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
@@ -139,7 +150,7 @@ function PipelineNode({
           </div>
           <div
             style={{
-              fontSize: '10px', color: meta.textColor,
+              fontSize: '10px', color: showDisconnectedStyle ? '#7c2d12' : meta.textColor,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}
           >
@@ -148,8 +159,33 @@ function PipelineNode({
         </div>
       </div>
 
+      {/* Connected tick */}
+      {showConnectedTick && (
+        <div
+          style={{
+            position: 'absolute',
+            right: '6px',
+            bottom: '6px',
+            width: '16px',
+            height: '16px',
+            borderRadius: '999px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #22c55e',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 20,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.10)',
+          }}
+          aria-label="Connected"
+          title="Connected"
+        >
+          <Check size={12} color="#16a34a" strokeWidth={3} />
+        </div>
+      )}
+
       {/* Body */}
-      <div style={{ padding: '8px 12px', backgroundColor: '#ffffff' }}>
+      <div style={{ padding: '8px 12px', backgroundColor: boxBg }}>
         {/* Config summary line */}
         <div
           style={{
@@ -194,7 +230,7 @@ function PipelineNode({
           style={{
             width: 10, height: 10,
             backgroundColor: '#ffffff',
-            border: `2px solid ${meta.color}`,
+            border: `2px solid ${handleBorder}`,
             left: -5,
           }}
         />
@@ -206,7 +242,7 @@ function PipelineNode({
           style={{
             width: 10, height: 10,
             backgroundColor: '#ffffff',
-            border: `2px solid ${meta.color}`,
+            border: `2px solid ${handleBorder}`,
             right: -5,
           }}
         />
