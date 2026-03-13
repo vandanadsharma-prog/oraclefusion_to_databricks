@@ -1,0 +1,13 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+body {
+  background-color: #ffffff;
+  overflow: hidden;
+  font-family: 'Calibri', 'Lato', 'Carlito', 'Segoe UI', Arial, sans-serif;
+}
+
+* {
+  font-family: 'Calibri', 'Lato', 'Carlito', 'Segoe UI', Arial, sans-serif;
+}
