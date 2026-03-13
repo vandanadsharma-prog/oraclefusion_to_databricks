@@ -28,6 +28,8 @@ interface PipelineStore {
   executionProgress: number;
   executionLogs: LogEntry[];
   executionSummary: ExecutionSummary | null;
+  activeRunId: string | null;
+  activeEventSource: EventSource | null;
   showExecutionPanel: boolean;
   showConfigPanel: boolean;
 
@@ -39,7 +41,7 @@ interface PipelineStore {
   updateNodeConfig: (id: string, config: Partial<NodeConfig>) => void;
   updateNodeStatus: (nodeType: NodeType, status: NodeStatus) => void;
   loadTemplate: (template: PipelineType) => void;
-  runPipeline: () => void;
+  runPipeline: () => Promise<void>;
   stopPipeline: () => void;
   clearPipeline: () => void;
   setShowExecutionPanel: (show: boolean) => void;
@@ -54,6 +56,11 @@ const timestamp = () =>
   new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
   '.' +
   String(Date.now() % 1000).padStart(3, '0');
+
+function backendUrl(): string | null {
+  const url = (import.meta as any).env?.VITE_BACKEND_URL as string | undefined;
+  return url && url.trim().length > 0 ? url.trim().replace(/\/+$/, '') : null;
+}
 
 const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   'oracle-fusion': {
@@ -71,11 +78,11 @@ const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
     status: 'idle', progress: 0,
     config: { installPath: '/opt/goldengate/21c', extractName: 'E_ORA21C', trailFileLocation: '/gg/dirdat/aa', replicatName: 'R_DBX', databricksConnector: 'JDBC' },
   },
-  'rest-api': {
-    label: 'REST API', nodeType: 'rest-api', subtitle: 'Paginated - fscmRestApi',
-    status: 'idle', progress: 0,
-    config: { endpoint: 'http://localhost:8000/fscmRestApi/resources/11.13.18.05/invoices', authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
-  },
+	  'rest-api': {
+	    label: 'REST API', nodeType: 'rest-api', subtitle: 'Paginated - fscmRestApi',
+	    status: 'idle', progress: 0,
+	    config: { endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices', authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
+	  },
   jdbc: {
     label: 'JDBC', nodeType: 'jdbc', subtitle: 'Direct Spark JDBC Read',
     status: 'idle', progress: 0,
@@ -110,6 +117,8 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
   executionProgress: 0,
   executionLogs: [],
   executionSummary: null,
+  activeRunId: null,
+  activeEventSource: null,
   showExecutionPanel: false,
   showConfigPanel: false,
 
@@ -177,6 +186,146 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
     const { nodes } = get();
     if (nodes.length === 0) return;
 
+    const beUrl = backendUrl();
+    if (beUrl) {
+      executionAborted = false;
+      const pipelineType = detectPipelineType(nodes);
+      const startTime = Date.now();
+
+      set((state) => ({
+        nodes: state.nodes.map((n) => ({ ...n, data: { ...n.data, status: 'idle', progress: 0 } })),
+        edges: state.edges.map((e) => ({ ...e, animated: true })),
+        executionStatus: 'running',
+        executionProgress: 0,
+        executionLogs: [
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: '===================================================' },
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: `  Pipeline started: ${pipelineType.toUpperCase()} pattern` },
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: `  Nodes: ${nodes.length} | Mode: BACKEND` },
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: `  Backend: ${beUrl}` },
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: '===================================================' },
+        ],
+        executionSummary: null,
+        showExecutionPanel: true,
+      }));
+
+      const startResp = await fetch(`${beUrl}/api/runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nodes: get().nodes.map((n) => ({ id: n.id, nodeType: n.data.nodeType, config: n.data.config })),
+          edges: get().edges,
+        }),
+      });
+
+      if (!startResp.ok) {
+        const errText = await startResp.text();
+        set((state) => ({
+          executionStatus: 'error',
+          edges: state.edges.map((e) => ({ ...e, animated: false })),
+          executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'error', message: `[BACKEND] start failed: ${errText}` }],
+        }));
+        return;
+      }
+
+      const { run_id } = await startResp.json();
+      const es = new EventSource(`${beUrl}/api/runs/${run_id}/events`);
+      set({ activeRunId: run_id, activeEventSource: es });
+
+      es.onmessage = (ev) => {
+        if (executionAborted) return;
+        let msg: any;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch (e) {
+          set((state) => ({
+            executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'debug', message: `[BACKEND] parse error: ${(e as Error).message}` }],
+          }));
+          return;
+        }
+
+        const event = msg.event;
+        const data = msg.data ?? {};
+
+        if (event === 'log') {
+          set((state) => ({
+            executionLogs: [
+              ...state.executionLogs,
+              { id: generateId(), timestamp: data.timestamp ?? timestamp(), level: data.level ?? 'info', message: data.message ?? '' },
+            ],
+          }));
+          return;
+        }
+
+        if (event === 'progress') {
+          set({ executionProgress: Number(data.progress ?? 0) });
+          return;
+        }
+
+        if (event === 'node_status') {
+          set((state) => ({
+            nodes: state.nodes.map((n) =>
+              n.data.nodeType === data.nodeType ? { ...n, data: { ...n.data, status: data.status } } : n
+            ),
+          }));
+          return;
+        }
+
+        if (event === 'summary') {
+          const actualTime = Date.now() - startTime;
+          set({
+            executionSummary: {
+              rowsExtracted: Number(data.rowsExtracted ?? 0),
+              rowsLoaded: Number(data.rowsLoaded ?? 0),
+              timeTakenMs: Number(data.timeTakenMs ?? actualTime),
+              pipelineType: data.pipelineType ?? 'custom',
+            },
+          });
+          return;
+        }
+
+        if (event === 'done') {
+          es.close();
+          const doneStatus = data.status === 'success' ? 'success' : 'error';
+          const timeTakenMs = get().executionSummary?.timeTakenMs ?? (Date.now() - startTime);
+          const rowsExtracted = get().executionSummary?.rowsExtracted ?? 0;
+          const rowsLoaded = get().executionSummary?.rowsLoaded ?? 0;
+
+          set((state) => ({
+            activeRunId: null,
+            activeEventSource: null,
+            executionStatus: doneStatus,
+            edges: state.edges.map((e) => ({ ...e, animated: false })),
+            executionLogs:
+              doneStatus === 'success'
+                ? [
+                    ...state.executionLogs,
+                    { id: generateId(), timestamp: timestamp(), level: 'success', message: '===================================================' },
+                    { id: generateId(), timestamp: timestamp(), level: 'success', message: `  Pipeline completed successfully in ${(timeTakenMs / 1000).toFixed(1)}s` },
+                    { id: generateId(), timestamp: timestamp(), level: 'success', message: `  Rows extracted: ${rowsExtracted.toLocaleString()} | Rows loaded: ${rowsLoaded.toLocaleString()}` },
+                    { id: generateId(), timestamp: timestamp(), level: 'success', message: '===================================================' },
+                  ]
+                : [
+                    ...state.executionLogs,
+                    { id: generateId(), timestamp: timestamp(), level: 'error', message: `Pipeline failed: ${data.error ?? 'unknown error'}` },
+                  ],
+          }));
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        set((state) => ({
+          activeRunId: null,
+          activeEventSource: null,
+          executionStatus: 'error',
+          edges: state.edges.map((e) => ({ ...e, animated: false })),
+          executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'error', message: '[BACKEND] event stream error / disconnected' }],
+        }));
+      };
+
+      return;
+    }
+
     executionAborted = false;
     const pipelineType = detectPipelineType(nodes);
     const steps = SIMULATIONS[pipelineType];
@@ -239,8 +388,22 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
 
   stopPipeline: () => {
     executionAborted = true;
+    const beUrl = backendUrl();
+    const { activeRunId, activeEventSource } = get();
+    if (activeEventSource) {
+      try {
+        activeEventSource.close();
+      } catch {
+        // ignore
+      }
+    }
+    if (beUrl && activeRunId) {
+      fetch(`${beUrl}/api/runs/${activeRunId}/stop`, { method: 'POST' }).catch(() => undefined);
+    }
     set((state) => ({
       executionStatus: 'idle',
+      activeRunId: null,
+      activeEventSource: null,
       nodes: state.nodes.map((n) => ({ ...n, data: { ...n.data, status: 'idle', progress: 0 } })),
       edges: state.edges.map((e) => ({ ...e, animated: false })),
       executionLogs: [
@@ -252,6 +415,14 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
 
   clearPipeline: () => {
     executionAborted = true;
+    const { activeEventSource } = get();
+    if (activeEventSource) {
+      try {
+        activeEventSource.close();
+      } catch {
+        // ignore
+      }
+    }
     set({
       nodes: [],
       edges: [],
@@ -260,6 +431,8 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       executionProgress: 0,
       executionLogs: [],
       executionSummary: null,
+      activeRunId: null,
+      activeEventSource: null,
       showExecutionPanel: false,
       showConfigPanel: false,
     });
