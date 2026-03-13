@@ -21,6 +21,9 @@ const EDGE_STYLE = {
   strokeWidth: 2,
 };
 
+const PIPELINE_CURSOR_SVG_BASE64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSIjMDAwIiBkPSJNMyAybDcgMjAgMi04IDgtMnoiLz48L3N2Zz4=';
+
 export function PipelineCanvas() {
   const {
     nodes, edges, onNodesChange, onEdgesChange, onConnect, selectNode, addNode,
@@ -131,6 +134,14 @@ export function PipelineCanvas() {
       </ReactFlow>
 
       <style>{`
+        .react-flow__pane {
+          cursor: url("data:image/svg+xml;base64,${PIPELINE_CURSOR_SVG_BASE64}") 0 0, default !important;
+        }
+
+        .react-flow__pane:active {
+          cursor: url("data:image/svg+xml;base64,${PIPELINE_CURSOR_SVG_BASE64}") 0 0, default !important;
+        }
+
         .react-flow__controls-button {
           background-color: #ffffff !important;
           border-color: #e2e8f0 !important;
