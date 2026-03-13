@@ -66,7 +66,9 @@ $env:VITE_BACKEND_URL="http://localhost:9000"
 npm run dev
 ```
 
-If `VITE_BACKEND_URL` is **not** set, the UI will keep using **SIMULATION** mode.
+If `VITE_BACKEND_URL` is **not** set:
+- when running the UI on `localhost`, it defaults to `http://localhost:9000`
+- otherwise, pipeline runs will fail until you set `VITE_BACKEND_URL`
 
 ---
 
@@ -188,7 +190,7 @@ Alternative (PATH):
 
 ### 7.3 Quick validation
 
-With backend running and `VITE_BACKEND_URL` set:
+With backend running (and `VITE_BACKEND_URL` set if not using localhost defaults):
 - Load the **GoldenGate CDC** template
 - Click **Run Pipeline**
 - Look at “Execution Logs” for a line indicating `ggsci` was found and its version output
@@ -222,8 +224,9 @@ Recommended order:
 
 ## 10) Troubleshooting
 
-- Backend not used (still simulation):
-  - Ensure `VITE_BACKEND_URL` is set in the terminal where you run `npm run dev`.
+- Backend not reachable:
+  - Ensure the backend is running (default: `http://localhost:9000/health`)
+  - If the UI is not running on `localhost`, set `VITE_BACKEND_URL` in the terminal where you run `npm run dev`.
 - CORS issues:
   - Backend allows `http://localhost:5173` by default; see `backend/app/core/config.py`.
 - Oracle connect failures:

@@ -15,7 +15,6 @@ import type {
   PipelineType,
   NodeConfig,
 } from '../types/pipeline';
-import { SIMULATIONS, EXECUTION_SUMMARIES } from '../lib/simulationData';
 import { TEMPLATES } from '../lib/templateData';
 
 type PipelineNode = Node<PipelineNodeData>;
@@ -49,7 +48,6 @@ interface PipelineStore {
 }
 
 let executionAborted = false;
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const timestamp = () =>
@@ -59,7 +57,12 @@ const timestamp = () =>
 
 function backendUrl(): string | null {
   const url = (import.meta as any).env?.VITE_BACKEND_URL as string | undefined;
-  return url && url.trim().length > 0 ? url.trim().replace(/\/+$/, '') : null;
+  if (url && url.trim().length > 0) return url.trim().replace(/\/+$/, '');
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return 'http://localhost:9000';
+  }
+  return null;
 }
 
 const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
@@ -186,11 +189,24 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
     const { nodes } = get();
     if (nodes.length === 0) return;
 
-    const beUrl = backendUrl();
-    if (beUrl) {
-      executionAborted = false;
-      const pipelineType = detectPipelineType(nodes);
-      const startTime = Date.now();
+	    const beUrl = backendUrl();
+	    if (!beUrl) {
+	      set((state) => ({
+	        executionStatus: 'error',
+	        executionProgress: 0,
+	        showExecutionPanel: true,
+	        edges: state.edges.map((e) => ({ ...e, animated: false })),
+	        executionLogs: [
+	          { id: generateId(), timestamp: timestamp(), level: 'error', message: 'Backend not configured.' },
+	          { id: generateId(), timestamp: timestamp(), level: 'info', message: 'Set VITE_BACKEND_URL (e.g. http://localhost:9000) and restart `npm run dev`.' },
+	        ],
+	      }));
+	      return;
+	    }
+
+	    executionAborted = false;
+	    const pipelineType = detectPipelineType(nodes);
+	    const startTime = Date.now();
 
       set((state) => ({
         nodes: state.nodes.map((n) => ({ ...n, data: { ...n.data, status: 'idle', progress: 0 } })),
@@ -208,14 +224,27 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         showExecutionPanel: true,
       }));
 
-      const startResp = await fetch(`${beUrl}/api/runs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nodes: get().nodes.map((n) => ({ id: n.id, nodeType: n.data.nodeType, config: n.data.config })),
-          edges: get().edges,
-        }),
-      });
+	      let startResp: Response;
+	      try {
+	        startResp = await fetch(`${beUrl}/api/runs`, {
+	          method: 'POST',
+	          headers: { 'Content-Type': 'application/json' },
+	          body: JSON.stringify({
+	            nodes: get().nodes.map((n) => ({ id: n.id, nodeType: n.data.nodeType, config: n.data.config })),
+	            edges: get().edges,
+	          }),
+	        });
+	      } catch (e) {
+	        set((state) => ({
+	          executionStatus: 'error',
+	          edges: state.edges.map((ed) => ({ ...ed, animated: false })),
+	          executionLogs: [
+	            ...state.executionLogs,
+	            { id: generateId(), timestamp: timestamp(), level: 'error', message: `[BACKEND] network error: ${(e as Error).message}` },
+	          ],
+	        }));
+	        return;
+	      }
 
       if (!startResp.ok) {
         const errText = await startResp.text();
@@ -323,68 +352,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         }));
       };
 
-      return;
-    }
-
-    executionAborted = false;
-    const pipelineType = detectPipelineType(nodes);
-    const steps = SIMULATIONS[pipelineType];
-    const startTime = Date.now();
-
-    set((state) => ({
-      nodes: state.nodes.map((n) => ({ ...n, data: { ...n.data, status: 'idle', progress: 0 } })),
-      edges: state.edges.map((e) => ({ ...e, animated: true })),
-      executionStatus: 'running',
-      executionProgress: 0,
-      executionLogs: [
-        { id: generateId(), timestamp: timestamp(), level: 'info', message: '===================================================' },
-        { id: generateId(), timestamp: timestamp(), level: 'info', message: `  Pipeline started: ${pipelineType.toUpperCase()} pattern` },
-        { id: generateId(), timestamp: timestamp(), level: 'info', message: `  Nodes: ${nodes.length} | Mode: SIMULATION` },
-        { id: generateId(), timestamp: timestamp(), level: 'info', message: '===================================================' },
-      ],
-      executionSummary: null,
-      showExecutionPanel: true,
-    }));
-
-    for (const step of steps) {
-      if (executionAborted) return;
-      await sleep(step.delayMs);
-      if (executionAborted) return;
-
-      set((state) => {
-        let newNodes = state.nodes;
-        if (step.updateNodeType && step.nodeStatus) {
-          newNodes = state.nodes.map((n) =>
-            n.data.nodeType === step.updateNodeType
-              ? { ...n, data: { ...n.data, status: step.nodeStatus! } }
-              : n
-          );
-        }
-        const newLogs = step.log
-          ? [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: step.log.level, message: step.log.message }]
-          : state.executionLogs;
-
-        return { nodes: newNodes, executionProgress: step.progress, executionLogs: newLogs };
-      });
-    }
-
-    if (!executionAborted) {
-      const summary = EXECUTION_SUMMARIES[pipelineType];
-      const actualTime = Date.now() - startTime;
-      set((state) => ({
-        executionStatus: 'success',
-        executionSummary: { ...summary, timeTakenMs: actualTime },
-        edges: state.edges.map((e) => ({ ...e, animated: false })),
-        executionLogs: [
-          ...state.executionLogs,
-          { id: generateId(), timestamp: timestamp(), level: 'success', message: '===================================================' },
-          { id: generateId(), timestamp: timestamp(), level: 'success', message: `  Pipeline completed successfully in ${(actualTime / 1000).toFixed(1)}s` },
-          { id: generateId(), timestamp: timestamp(), level: 'success', message: `  Rows extracted: ${summary.rowsExtracted.toLocaleString()} | Rows loaded: ${summary.rowsLoaded.toLocaleString()}` },
-          { id: generateId(), timestamp: timestamp(), level: 'success', message: '===================================================' },
-        ],
-      }));
-    }
-  },
+	  },
 
   stopPipeline: () => {
     executionAborted = true;
