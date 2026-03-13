@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oracle Datatype Reference – complete by version</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            margin: 0;
+            padding: 2rem 1.5rem;
+            color: #1e2b3c;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-weight: 500;
+            font-size: 2.2rem;
+            border-bottom: 3px solid #2b5797;
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #1e3a5f;
+        }
+        .subhead {
+            font-size: 1.1rem;
+            background: #e4eef9;
+            padding: 0.7rem 1.2rem;
+            border-radius: 2rem;
+            margin-bottom: 2rem;
+            display: inline-block;
+            border-left: 5px solid #2b5797;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+            margin: 1.8rem 0 2.5rem;
+            font-size: 0.95rem;
+        }
+        th {
+            background-color: #1e3a5f;
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+            padding: 15px 10px;
+            text-align: left;
+        }
+        td {
+            padding: 14px 10px;
+            border-bottom: 1px solid #dde6ed;
+            vertical-align: top;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tbody tr:hover {
+            background-color: #f0f5fd;
+        }
+        .category-badge {
+            background: #dde9f5;
+            color: #113355;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 5px 10px;
+            border-radius: 40px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .datatype-name {
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            font-weight: 600;
+            background: #eaf0f6;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            color: #003b6f;
+        }
+        .version-badge {
+            background: #dae4f2;
+            color: #003055;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+            display: inline-block;
+            margin-right: 4px;
+            margin-bottom: 2px;
+        }
+        .footnote {
+            background: #f3f7fb;
+            border-top: 2px dashed #9bb0c7;
+            padding: 1.5rem 1.2rem;
+            border-radius: 16px;
+            color: #1d2f44;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .footnote code {
+            background: #e3eaf1;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-family: monospace;
+        }
+        @media (max-width: 750px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.8rem; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { display: none; }
+            tr {
+                border: 1px solid #bcccd9;
+                margin-bottom: 1rem;
+                border-radius: 14px;
+                overflow: hidden;
+            }
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 12px 12px;
+                border-bottom: 1px solid #d5e0ea;
+            }
+            td:before {
+                content: attr(data-label);
+                font-weight: 700;
+                width: 40%;
+                min-width: 120px;
+                color: #1e3a5f;
+            }
+            td:last-child {
+                border-bottom: none;
+            }
+            .datatype-name { white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Oracle Datatype Reference · complete by version</h1>
+    <div class="subhead">All core datatypes from Oracle5 to 23ai · single table with categories</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Datatype</th>
+                <th>Description</th>
+                <th>Version introduced / key changes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- CHARACTER -->
+            <tr>
+                <td data-label="Category"><span class="category-badge">Character</span></td>
+                <td data-label="Datatype"><span class="datatype-name">CHAR(size)</span></td>
+                <td data-label="Description">Fixed‑length character data. Max size is 2000 bytes (or 2000 characters in later versions).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle5/6</span> variable‑length, max 254 chars<br><span class="version-badge">Oracle7</span> fixed‑length, max 255 chars<br><span class="version-badge">Oracle8/8i+</span> max increased to 2000</td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Character</span></td>
+                <td data-label="Datatype"><span class="datatype-name">NCHAR(size)</span></td>
+                <td data-label="Description">Fixed‑length Unicode character data. Max size determined by national character set (max 2000 bytes).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Character</span></td>
+                <td data-label="Datatype"><span class="datatype-name">VARCHAR2(size)</span></td>
+                <td data-label="Description">The standard variable‑length string datatype. Max size depends on <code>MAX_STRING_SIZE</code> setting.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle5/6</span> max 2000 chars<br><span class="version-badge">Oracle7</span> max 2000 chars<br><span class="version-badge">Oracle8/8i‑11g</span> max 4000 bytes/characters<br><span class="version-badge">Oracle12c+</span> can be 32767 bytes/char if <code>MAX_STRING_SIZE=EXTENDED</code></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Character</span></td>
+                <td data-label="Datatype"><span class="datatype-name">NVARCHAR2(size)</span></td>
+                <td data-label="Description">Variable‑length Unicode character data. Max size determined by national character set.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Character</span></td>
+                <td data-label="Datatype"><span class="datatype-name">VARCHAR</span></td>
+                <td data-label="Description">Currently synonymous with <code>VARCHAR2</code>. Avoid using it; future behavior may change.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle7 onwards</span> (but <code>VARCHAR2</code> recommended)</td>
+            </tr>
+
+            <!-- NUMERIC -->
+            <tr>
+                <td data-label="Category"><span class="category-badge">Numeric</span></td>
+                <td data-label="Datatype"><span class="datatype-name">NUMBER(p,s)</span></td>
+                <td data-label="Description">Primary numeric datatype. Stores integers, fixed‑point, floating‑point. High precision (38 decimal digits).</td>
+                <td data-label="Version changes"><span class="version-badge">Present in all versions</span> In Oracle5/6 it was <code>NUMBER(m,n)</code></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Numeric</span></td>
+                <td data-label="Datatype"><span class="datatype-name">FLOAT(p)</span></td>
+                <td data-label="Description">Subtype of <code>NUMBER</code>. Floating‑point with binary precision p (1‑126).</td>
+                <td data-label="Version changes"><span class="version-badge">At least Oracle7 onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Numeric</span></td>
+                <td data-label="Datatype"><span class="datatype-name">BINARY_FLOAT</span></td>
+                <td data-label="Description">32‑bit, single‑precision floating‑point (IEEE standard).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle 10g onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Numeric</span></td>
+                <td data-label="Datatype"><span class="datatype-name">BINARY_DOUBLE</span></td>
+                <td data-label="Description">64‑bit, double‑precision floating‑point (IEEE standard).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle 10g onwards</span></td>
+            </tr>
+
+            <!-- DATE / TIME -->
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">DATE</span></td>
+                <td data-label="Description">Stores date and time (century, year, month, day, hour, minute, second). Does <strong>not</strong> include fractional seconds or time zone.</td>
+                <td data-label="Version changes"><span class="version-badge">Present in all versions</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">TIMESTAMP(p)</span></td>
+                <td data-label="Description">Extends <code>DATE</code> to include fractional seconds with precision p (0‑9).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle9i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">TIMESTAMP WITH TIME ZONE</span></td>
+                <td data-label="Description">Like <code>TIMESTAMP</code>, plus a time zone displacement.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle9i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">TIMESTAMP WITH LOCAL TIME ZONE</span></td>
+                <td data-label="Description">Normalized to database time zone on storage; adjusted to session time zone on retrieval.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle9i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">INTERVAL YEAR TO MONTH</span></td>
+                <td data-label="Description">Stores a period in years and months.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle9i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Date / time</span></td>
+                <td data-label="Datatype"><span class="datatype-name">INTERVAL DAY TO SECOND</span></td>
+                <td data-label="Description">Stores a period in days, hours, minutes, seconds.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle9i onwards</span></td>
+            </tr>
+
+            <!-- LOB & BINARY -->
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">BLOB</span></td>
+                <td data-label="Description">Binary Large Object. Max size: (4 GB - 1) × DB block size.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">CLOB</span></td>
+                <td data-label="Description">Character Large Object (uses database character set). Max size: (4 GB - 1) × DB block size.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">NCLOB</span></td>
+                <td data-label="Description">National Character Large Object (uses national character set). Max size: (4 GB - 1) × DB block size.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">BFILE</span></td>
+                <td data-label="Description">Locator to an external binary file. Max external file size: 4 GB.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8/8i onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">RAW(size)</span></td>
+                <td data-label="Description">Variable‑length binary data. Max size 2000 bytes; in 12c+ can be 32767 if <code>MAX_STRING_SIZE=EXTENDED</code>.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle5/6</span> max 2GB? (as <code>RAW</code> & <code>LONG RAW</code>)<br><span class="version-badge">Oracle7</span> max 2000 bytes</td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">LONG</span></td>
+                <td data-label="Description">Variable‑length character data, max 2GB. For backward compatibility. Use <code>CLOB</code> instead.</td>
+                <td data-label="Version changes"><span class="version-badge">Early versions</span> – deprecated</td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">LOB / binary</span></td>
+                <td data-label="Datatype"><span class="datatype-name">LONG RAW</span></td>
+                <td data-label="Description">Variable‑length binary data, max 2GB. For backward compatibility. Use <code>BLOB</code> instead.</td>
+                <td data-label="Version changes"><span class="version-badge">Early versions</span> – deprecated</td>
+            </tr>
+
+            <!-- ROWID / SPECIAL -->
+            <tr>
+                <td data-label="Category"><span class="category-badge">Rowid / special</span></td>
+                <td data-label="Datatype"><span class="datatype-name">ROWID</span></td>
+                <td data-label="Description">Base64 string representing the physical address of a row.</td>
+                <td data-label="Version changes"><span class="version-badge">Present in many versions</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Rowid / special</span></td>
+                <td data-label="Datatype"><span class="datatype-name">UROWID(size)</span></td>
+                <td data-label="Description">Logical address of a row (for index‑organized tables). Max size 4000 bytes.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle8i (?) onwards</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Rowid / special</span></td>
+                <td data-label="Datatype"><span class="datatype-name">JSON (native)</span></td>
+                <td data-label="Description">Stores JSON in optimized binary format (OSON).</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle 21c</span></td>
+            </tr>
+            <tr>
+                <td data-label="Category"><span class="category-badge">Rowid / special</span></td>
+                <td data-label="Datatype"><span class="datatype-name">VECTOR</span></td>
+                <td data-label="Description">Stores vector embeddings for AI Vector Search.</td>
+                <td data-label="Version changes"><span class="version-badge">Oracle 23ai</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footnote">
+        <p><strong>Version notes:</strong> Oracle5/6, Oracle7, Oracle8/8i, Oracle9i, Oracle10g, Oracle11g, Oracle12c, Oracle18c, Oracle19c, Oracle21c, Oracle23ai. “MAX_STRING_SIZE = EXTENDED” available from 12c onward. <code>VARCHAR</code> is currently identical to <code>VARCHAR2</code> but use of <code>VARCHAR2</code> is strongly recommended. Some very old types (LONG, LONG RAW) are kept only for backward compatibility — modern applications should use LOBs. Max sizes listed are typical; some depend on block size or national character set. Refer to official Oracle documentation for exact limits.</p>
+    </div>
+</div>
+</body>
+</html>

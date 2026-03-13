@@ -1,7 +1,5 @@
 
-  # Build app from file
-
-  This is a code bundle for Build app from file. The original project is available at https://www.figma.com/design/o2Vv2tMEb2bzLqveSe5UjW/Build-app-from-file.
+  # Oracle Fusion -> Databricks: Data Ingestion
 
   ## Running the code
 
