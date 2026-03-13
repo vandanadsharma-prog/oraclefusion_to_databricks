@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
+    fusion_mock_require_auth: bool = False
+
 
 settings = Settings()
-

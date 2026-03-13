@@ -151,7 +151,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           nodeType: 'oracle-fusion',
           subtitle: 'localhost:9000/fscmRestApi',
           config: {
-            host: 'localhost', port: '8000', serviceName: 'ORCLPDB1',
+            host: 'localhost', port: '9000', serviceName: 'ORCLPDB1',
             username: 'FUSION_USER', password: '••••••••',
             table: 'INVOICES', filterColumn: 'lastUpdateDate', filterValue: '2026-01-01',
           },
