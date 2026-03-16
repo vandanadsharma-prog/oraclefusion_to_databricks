@@ -39,7 +39,7 @@ const sectionLabel = (icon: React.ReactNode, title: string) => (
 );
 
 export function NodePalette() {
-  const { loadTemplate, clearPipeline } = usePipelineStore();
+  const { loadTemplate, deleteActivePipeline, activePipelineName } = usePipelineStore();
 
   const onDragStart = (e: React.DragEvent, nodeType: NodeType) => {
     e.dataTransfer.setData('application/reactflow', nodeType);
@@ -169,7 +169,14 @@ export function NodePalette() {
       {/* Clear */}
       <div style={{ padding: '0 12px 12px' }}>
         <button
-          onClick={clearPipeline}
+          onClick={() => {
+            const name = activePipelineName || 'Untitled Pipeline';
+            const typed = window.prompt(
+              `Are you sure you want to delete all components of this pipeline (${name})?\n\nType yes to confirm.`
+            );
+            if ((typed ?? '').trim().toLowerCase() !== 'yes') return;
+            deleteActivePipeline().catch(() => undefined);
+          }}
           style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             gap: '6px', padding: '7px', borderRadius: '5px', fontSize: '12px',

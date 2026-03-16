@@ -13,5 +13,7 @@ class Settings(BaseSettings):
 
     fusion_mock_require_auth: bool = False
 
+    pipelines_dir: str = "pipelines"
+
 
 settings = Settings()

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Header } from './components/pipeline/Header';
 import { NodePalette } from './components/pipeline/NodePalette';
@@ -8,7 +8,11 @@ import { ExecutionPanel } from './components/pipeline/ExecutionPanel';
 import { usePipelineStore } from './store/pipelineStore';
 
 function AppInner() {
-  const { showConfigPanel } = usePipelineStore();
+  const { showConfigPanel, savePipeline } = usePipelineStore();
+
+  useEffect(() => {
+    savePipeline().catch(() => undefined);
+  }, [savePipeline]);
 
   return (
     <div

@@ -3,7 +3,7 @@ import type { PipelineNodeData, PipelineType } from '../types/pipeline';
 
 type PipelineNode = Node<PipelineNodeData>;
 
-const defaultStatus = { status: 'idle' as const, progress: 0 };
+const defaultNodeState = { status: 'idle' as const, progress: 0, connectionStatus: 'disconnected' as const };
 
 export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edge[]; name: string; description: string }> = {
   bicc: {
@@ -15,7 +15,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'oracle-fusion',
         position: { x: 40, y: 180 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Oracle Fusion',
           nodeType: 'oracle-fusion',
           subtitle: 'localhost:1521/ORCLPDB1',
@@ -31,7 +31,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'bicc',
         position: { x: 320, y: 180 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'BICC',
           nodeType: 'bicc',
           subtitle: 'Full Export – CSV',
@@ -45,7 +45,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'cloud-storage',
         position: { x: 600, y: 180 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Cloud Storage',
           nodeType: 'cloud-storage',
           subtitle: 'ADLS Gen2',
@@ -60,7 +60,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'databricks',
         position: { x: 880, y: 180 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Databricks',
           nodeType: 'databricks',
           subtitle: 'unity_catalog.bronze',
@@ -88,7 +88,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'oracle-fusion',
         position: { x: 80, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Oracle Fusion',
           nodeType: 'oracle-fusion',
           subtitle: 'localhost:1521/ORCLPDB1',
@@ -104,7 +104,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'goldengate',
         position: { x: 420, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'GoldenGate',
           nodeType: 'goldengate',
           subtitle: 'CDC Trail → Databricks',
@@ -119,7 +119,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'databricks',
         position: { x: 760, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Databricks',
           nodeType: 'databricks',
           subtitle: 'unity_catalog.silver',
@@ -146,7 +146,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'oracle-fusion',
         position: { x: 80, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Oracle Fusion',
           nodeType: 'oracle-fusion',
           subtitle: 'localhost:9000/fscmRestApi',
@@ -162,7 +162,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'rest-api',
         position: { x: 420, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'REST API',
           nodeType: 'rest-api',
           subtitle: 'Paginated – OAuth2',
@@ -178,7 +178,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'databricks',
         position: { x: 760, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Databricks',
           nodeType: 'databricks',
           subtitle: 'unity_catalog.bronze',
@@ -205,7 +205,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'oracle-fusion',
         position: { x: 80, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Oracle Fusion',
           nodeType: 'oracle-fusion',
           subtitle: 'localhost:1521/ORCLPDB1',
@@ -221,7 +221,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'jdbc',
         position: { x: 420, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'JDBC',
           nodeType: 'jdbc',
           subtitle: 'Spark JDBC – Pushdown',
@@ -239,7 +239,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
         type: 'databricks',
         position: { x: 760, y: 200 },
         data: {
-          ...defaultStatus,
+          ...defaultNodeState,
           label: 'Databricks',
           nodeType: 'databricks',
           subtitle: 'unity_catalog.bronze',

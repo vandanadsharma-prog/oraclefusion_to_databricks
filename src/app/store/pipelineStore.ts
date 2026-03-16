@@ -23,6 +23,8 @@ interface PipelineStore {
   nodes: PipelineNode[];
   edges: Edge[];
   selectedNodeId: string | null;
+  activePipelineId: string | null;
+  activePipelineName: string;
   executionStatus: ExecutionStatus;
   executionProgress: number;
   executionLogs: LogEntry[];
@@ -42,12 +44,16 @@ interface PipelineStore {
   loadTemplate: (template: PipelineType) => void;
   runPipeline: () => Promise<void>;
   stopPipeline: () => void;
-  clearPipeline: () => void;
+  connectNode: (id: string) => Promise<void>;
+  disconnectNode: (id: string) => void;
+  savePipeline: () => Promise<void>;
+  deleteActivePipeline: () => Promise<void>;
   setShowExecutionPanel: (show: boolean) => void;
   setShowConfigPanel: (show: boolean) => void;
 }
 
 let executionAborted = false;
+let saveTimer: number | null = null;
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 const timestamp = () =>
@@ -68,37 +74,37 @@ function backendUrl(): string | null {
 const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   'oracle-fusion': {
     label: 'Oracle Fusion', nodeType: 'oracle-fusion', subtitle: 'ERP Source Database',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { host: 'localhost', port: '1521', serviceName: 'ORCLPDB1', username: 'FUSION_USER', password: '', table: 'GL_JE_HEADERS', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01' },
   },
   bicc: {
     label: 'BICC', nodeType: 'bicc', subtitle: 'Full Export via REST',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { format: 'csv', outputPath: './data/bicc/', schedule: 'immediate', exportType: 'full' },
   },
   goldengate: {
     label: 'GoldenGate', nodeType: 'goldengate', subtitle: 'CDC - Trail to Databricks',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { installPath: '/opt/goldengate/21c', extractName: 'E_ORA21C', trailFileLocation: '/gg/dirdat/aa', replicatName: 'R_DBX', databricksConnector: 'JDBC' },
   },
-	  'rest-api': {
-	    label: 'REST API', nodeType: 'rest-api', subtitle: 'Paginated - fscmRestApi',
-	    status: 'idle', progress: 0,
-	    config: { endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices', authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
-	  },
+		  'rest-api': {
+		    label: 'REST API', nodeType: 'rest-api', subtitle: 'Paginated - fscmRestApi',
+		    connectionStatus: 'disconnected', status: 'idle', progress: 0,
+		    config: { endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices', authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
+		  },
   jdbc: {
     label: 'JDBC', nodeType: 'jdbc', subtitle: 'Direct Spark JDBC Read',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/ORCLPDB1', username: 'FUSION_USER', password: '', query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'", fetchSize: 1000 },
   },
   'cloud-storage': {
     label: 'Cloud Storage', nodeType: 'cloud-storage', subtitle: 'ADLS Gen2 / S3',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { storageType: 'adls', container: 'oracle-data', path: '/oracle/exports/', accountName: '', accessKey: '' },
   },
   databricks: {
     label: 'Databricks', nodeType: 'databricks', subtitle: 'Unity Catalog - Delta',
-    status: 'idle', progress: 0,
+    connectionStatus: 'disconnected', status: 'idle', progress: 0,
     config: { workspaceUrl: 'https://adb-123456789.azuredatabricks.net', accessToken: '', catalog: 'unity_catalog', schema: 'bronze', tableName: 'output_table', writeMode: 'append', zOrderBy: '' },
   },
 };
@@ -112,10 +118,32 @@ function detectPipelineType(nodes: PipelineNode[]): PipelineType {
   return 'custom';
 }
 
+function newPipelineId(prefix: string) {
+  return `${prefix}-${Date.now()}-${generateId()}`;
+}
+
+function scheduleSave(get: () => PipelineStore) {
+  if (saveTimer !== null) window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => {
+    get().savePipeline().catch(() => undefined);
+  }, 800);
+}
+
+function serializeNodes(nodes: PipelineNode[]) {
+  return nodes.map((n) => ({
+    id: n.id,
+    type: n.type,
+    position: n.position,
+    data: n.data,
+  }));
+}
+
 export const usePipelineStore = create<PipelineStore>()((set, get) => ({
   nodes: TEMPLATES.bicc.nodes,
   edges: TEMPLATES.bicc.edges,
   selectedNodeId: null,
+  activePipelineId: newPipelineId('bicc'),
+  activePipelineName: TEMPLATES.bicc.name,
   executionStatus: 'idle',
   executionProgress: 0,
   executionLogs: [],
@@ -127,14 +155,17 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
 
   onNodesChange: (changes) => {
     set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as PipelineNode[] }));
+    scheduleSave(get);
   },
 
   onEdgesChange: (changes) => {
     set((state) => ({ edges: applyEdgeChanges(changes, state.edges) }));
+    scheduleSave(get);
   },
 
   onConnect: (connection) => {
     set((state) => ({ edges: addEdge({ ...connection, animated: false }, state.edges) }));
+    scheduleSave(get);
   },
 
   selectNode: (id) => {
@@ -142,23 +173,48 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
   },
 
   addNode: (nodeType, position) => {
+    const needsPipeline = get().activePipelineId === null;
+    if (needsPipeline) {
+      set({ activePipelineId: newPipelineId('custom'), activePipelineName: 'Custom Pipeline' });
+    }
     const id = `${nodeType}-${generateId()}`;
     const data = DEFAULT_NODE_DATA[nodeType];
     const newNode: PipelineNode = {
       id,
       type: nodeType,
       position,
-      data: { ...data, label: data.label!, nodeType, subtitle: data.subtitle!, config: { ...data.config }, status: 'idle', progress: 0 },
+      data: {
+        ...data,
+        label: data.label!,
+        nodeType,
+        subtitle: data.subtitle!,
+        config: { ...data.config },
+        connectionStatus: (data.connectionStatus as any) ?? 'disconnected',
+        status: 'idle',
+        progress: 0,
+      },
     };
     set((state) => ({ nodes: [...state.nodes, newNode] }));
+    scheduleSave(get);
   },
 
   updateNodeConfig: (id, config) => {
     set((state) => ({
       nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, config: { ...n.data.config, ...config } } } : n
+        n.id === id
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                config: { ...n.data.config, ...config },
+                connectionStatus: 'disconnected',
+                connectionError: undefined,
+              },
+            }
+          : n
       ),
     }));
+    scheduleSave(get);
   },
 
   updateNodeStatus: (nodeType, status) => {
@@ -176,6 +232,8 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       nodes: t.nodes.map((n) => ({ ...n, data: { ...n.data, status: 'idle', progress: 0 } })),
       edges: t.edges,
       selectedNodeId: null,
+      activePipelineId: newPipelineId(template),
+      activePipelineName: t.name,
       executionStatus: 'idle',
       executionProgress: 0,
       executionLogs: [],
@@ -183,6 +241,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       showExecutionPanel: false,
       showConfigPanel: false,
     });
+    scheduleSave(get);
   },
 
   runPipeline: async () => {
@@ -352,7 +411,153 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         }));
       };
 
-	  },
+		  },
+
+  connectNode: async (id) => {
+    const node = get().nodes.find((n) => n.id === id);
+    if (!node) return;
+
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'connecting', connectionError: undefined } } : n
+      ),
+    }));
+
+    const beUrl = backendUrl();
+    if (!beUrl) {
+      set((state) => ({
+        showExecutionPanel: true,
+        executionLogs: [
+          ...state.executionLogs,
+          { id: generateId(), timestamp: timestamp(), level: 'error', message: `[CONNECT] Backend not configured for ${node.data.nodeType}.` },
+          { id: generateId(), timestamp: timestamp(), level: 'info', message: 'Set VITE_BACKEND_URL (e.g. http://localhost:9000) and restart `npm run dev`.' },
+        ],
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: 'backend_not_configured' } } : n
+        ),
+      }));
+      scheduleSave(get);
+      return;
+    }
+
+    let resp: Response;
+    try {
+      resp = await fetch(`${beUrl}/api/connections/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeType: node.data.nodeType, config: node.data.config }),
+      });
+    } catch (e) {
+      const msg = (e as Error).message;
+      set((state) => ({
+        showExecutionPanel: true,
+        executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'error', message: `[CONNECT] network error: ${msg}` }],
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: msg } } : n
+        ),
+      }));
+      scheduleSave(get);
+      return;
+    }
+
+    let payload: any = null;
+    try {
+      payload = await resp.json();
+    } catch {
+      payload = null;
+    }
+
+    const ok = Boolean(payload?.ok) && resp.ok;
+    const message = String(payload?.message ?? (resp.ok ? 'ok' : 'error'));
+
+    if (ok) {
+      set((state) => ({
+        executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'success', message: `[CONNECT] ${node.data.nodeType}: ${message}` }],
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'connected', connectionError: undefined } } : n
+        ),
+      }));
+      scheduleSave(get);
+      return;
+    }
+
+    set((state) => ({
+      showExecutionPanel: true,
+      executionLogs: [...state.executionLogs, { id: generateId(), timestamp: timestamp(), level: 'error', message: `[CONNECT] ${node.data.nodeType} failed: ${message}` }],
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: message } } : n
+      ),
+    }));
+    scheduleSave(get);
+  },
+
+  disconnectNode: (id) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'disconnected', connectionError: undefined } } : n
+      ),
+    }));
+    scheduleSave(get);
+  },
+
+  savePipeline: async () => {
+    const beUrl = backendUrl();
+    if (!beUrl) return;
+    const { activePipelineId, activePipelineName, nodes, edges } = get();
+    if (!activePipelineId) return;
+
+    await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: activePipelineId,
+        name: activePipelineName,
+        nodes: serializeNodes(nodes),
+        edges,
+        updatedAtMs: Date.now(),
+      }),
+    }).catch(() => undefined);
+  },
+
+  deleteActivePipeline: async () => {
+    executionAborted = true;
+    if (saveTimer !== null) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+
+    const beUrl = backendUrl();
+    const { activePipelineId, activeEventSource, activeRunId } = get();
+    if (activeEventSource) {
+      try {
+        activeEventSource.close();
+      } catch {
+        // ignore
+      }
+    }
+    if (beUrl && activeRunId) {
+      fetch(`${beUrl}/api/runs/${activeRunId}/stop`, { method: 'POST' }).catch(() => undefined);
+    }
+    if (beUrl && activePipelineId) {
+      await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, { method: 'DELETE' }).catch(() => undefined);
+    }
+
+    set({
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      activePipelineId: null,
+      activePipelineName: 'Untitled Pipeline',
+      executionStatus: 'idle',
+      executionProgress: 0,
+      executionLogs: [],
+      executionSummary: null,
+      activeRunId: null,
+      activeEventSource: null,
+      showExecutionPanel: false,
+      showConfigPanel: false,
+    });
+  },
 
   stopPipeline: () => {
     executionAborted = true;
@@ -379,31 +584,6 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         { id: generateId(), timestamp: timestamp(), level: 'warn', message: 'Pipeline execution stopped by user.' },
       ],
     }));
-  },
-
-  clearPipeline: () => {
-    executionAborted = true;
-    const { activeEventSource } = get();
-    if (activeEventSource) {
-      try {
-        activeEventSource.close();
-      } catch {
-        // ignore
-      }
-    }
-    set({
-      nodes: [],
-      edges: [],
-      selectedNodeId: null,
-      executionStatus: 'idle',
-      executionProgress: 0,
-      executionLogs: [],
-      executionSummary: null,
-      activeRunId: null,
-      activeEventSource: null,
-      showExecutionPanel: false,
-      showConfigPanel: false,
-    });
   },
 
   setShowExecutionPanel: (show) => set({ showExecutionPanel: show }),

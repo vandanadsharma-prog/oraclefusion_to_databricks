@@ -1,19 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Handle, Position, useStore } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { Check, CheckCircle2, XCircle, Loader2, Circle, X } from 'lucide-react';
-import type { PipelineNodeData, NodeStatus } from '../../types/pipeline';
+import type { PipelineNodeData, NodeStatus, ConnectionStatus } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
 import { BRAND_LOGOS } from './BrandLogos';
 import { TRADEOFFS_BY_NODE_TYPE } from '../../lib/tradeoffs';
+import { usePipelineStore } from '../../store/pipelineStore';
 
-function StatusBadge({ status }: { status: NodeStatus }) {
-  const map: Record<NodeStatus, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
-    idle: { label: 'Idle', bg: '#f3f4f6', text: '#6b7280', icon: <Circle size={10} /> },
-    waiting: { label: 'Waiting', bg: '#fef9c3', text: '#854d0e', icon: <Circle size={10} /> },
-    running: { label: 'Running', bg: '#dbeafe', text: '#1d4ed8', icon: <Loader2 size={10} className="animate-spin" /> },
-    success: { label: 'Success', bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={10} /> },
-    error: { label: 'Error', bg: '#fee2e2', text: '#dc2626', icon: <XCircle size={10} /> },
+function ConnectionBadge({ status }: { status: ConnectionStatus }) {
+  const map: Record<ConnectionStatus, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
+    disconnected: { label: 'Disconnected', bg: '#f3f4f6', text: '#6b7280', icon: <Circle size={10} /> },
+    connecting: { label: 'Connecting', bg: '#eff6ff', text: '#1d4ed8', icon: <Loader2 size={10} className="animate-spin" /> },
+    connected: { label: 'Connected', bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={10} /> },
+    error: { label: 'Error', bg: '#fff7ed', text: '#c2410c', icon: <XCircle size={10} /> },
   };
   const { label, bg, text, icon } = map[status];
   return (
@@ -27,20 +27,47 @@ function StatusBadge({ status }: { status: NodeStatus }) {
   );
 }
 
+function ExecutionBadge({ status }: { status: NodeStatus }) {
+  const map: Record<NodeStatus, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
+    idle: { label: 'Idle', bg: '#f8fafc', text: '#94a3b8', icon: <Circle size={10} /> },
+    waiting: { label: 'Waiting', bg: '#fef9c3', text: '#854d0e', icon: <Circle size={10} /> },
+    running: { label: 'Running', bg: '#dbeafe', text: '#1d4ed8', icon: <Loader2 size={10} className="animate-spin" /> },
+    success: { label: 'Success', bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={10} /> },
+    error: { label: 'Error', bg: '#fee2e2', text: '#dc2626', icon: <XCircle size={10} /> },
+  };
+  const { label, bg, text, icon } = map[status];
+  return (
+    <div
+      className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+      style={{ backgroundColor: bg, color: text, fontSize: '10px' }}
+      title={`Execution: ${label}`}
+    >
+      {icon}
+      <span style={{ fontFamily: "'Calibri', 'Lato', sans-serif" }}>{label}</span>
+    </div>
+  );
+}
+
 function PipelineNode({
   id, data, selected, isSource, isTarget,
 }: NodeProps<PipelineNodeData> & { isSource?: boolean; isTarget?: boolean }) {
   const meta = NODE_META[data.nodeType];
   const Logo = BRAND_LOGOS[data.nodeType];
+  const connectNode = usePipelineStore((s) => s.connectNode);
+  const disconnectNode = usePipelineStore((s) => s.disconnectNode);
+
+  const connectionStatus: ConnectionStatus = data.connectionStatus ?? 'disconnected';
+  const isConnecting = connectionStatus === 'connecting';
+  const isConnected = connectionStatus === 'connected';
+  const isConnError = connectionStatus === 'error';
+  const isDisconnected = connectionStatus === 'disconnected';
+
   const isRunning = data.status === 'running';
   const isSuccess = data.status === 'success';
-  const isError = data.status === 'error';
-  const isConnected = useStore((state: any) =>
-    (state.edges ?? []).some((e: any) => e.source === id || e.target === id)
-  );
-  const isDisconnected = !isConnected;
-  const showDisconnectedStyle = isError || isDisconnected;
-  const showConnectedTick = isConnected && !isError;
+  const isExecError = data.status === 'error';
+
+  const showErrorStyle = isConnError || isExecError;
+  const showConnectedTick = isConnected && !showErrorStyle;
 
   const tradeoff = useMemo(() => TRADEOFFS_BY_NODE_TYPE[data.nodeType], [data.nodeType]);
   const [showTradeoff, setShowTradeoff] = useState(false);
@@ -72,19 +99,34 @@ function PipelineNode({
     if (tradeoff) openTradeoff();
     return () => {
       clearHideTimer();
-    };
-  }, [selected, tradeoff, openTradeoff, clearHideTimer]);
+	    };
+	  }, [selected, tradeoff, openTradeoff, clearHideTimer]);
 
-  let borderColor = '#e2e8f0';
-  if (showDisconnectedStyle) borderColor = '#ef4444';
+  let borderColor = '#cbd5e1';
+  if (showErrorStyle) borderColor = '#ef4444';
+  else if (isConnected) borderColor = '#22c55e';
   else if (selected) borderColor = meta.color;
   else if (isRunning) borderColor = meta.color;
   else if (isSuccess) borderColor = '#16a34a';
 
-  const boxBg = showDisconnectedStyle ? '#fff7ed' : '#f0fdf4';
-  const headerBg = showDisconnectedStyle ? '#ffedd5' : '#dcfce7';
-  const topAccent = showDisconnectedStyle ? '#ef4444' : meta.color;
-  const handleBorder = showDisconnectedStyle ? '#ef4444' : meta.color;
+  const boxBg = showErrorStyle
+    ? '#fff7ed'
+    : isConnected
+      ? '#f0fdf4'
+      : isConnecting
+        ? '#eff6ff'
+        : '#f3f4f6';
+
+  const headerBg = showErrorStyle
+    ? '#ffedd5'
+    : isConnected
+      ? '#dcfce7'
+      : isConnecting
+        ? '#dbeafe'
+        : '#e5e7eb';
+
+  const topAccent = showErrorStyle ? '#ef4444' : isConnected ? '#16a34a' : isConnecting ? meta.color : '#94a3b8';
+  const handleBorder = showErrorStyle ? '#ef4444' : meta.color;
 
   const boxStyle: React.CSSProperties = {
     width: '220px',
@@ -119,7 +161,7 @@ function PipelineNode({
       <div
         style={{
           backgroundColor: headerBg,
-          borderBottom: showDisconnectedStyle ? '1px solid #fecaca' : `1px solid ${meta.color}22`,
+          borderBottom: showErrorStyle ? '1px solid #fecaca' : `1px solid ${meta.color}22`,
           padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
@@ -150,7 +192,7 @@ function PipelineNode({
           </div>
           <div
             style={{
-              fontSize: '10px', color: showDisconnectedStyle ? '#7c2d12' : meta.textColor,
+              fontSize: '10px', color: showErrorStyle ? '#7c2d12' : meta.textColor,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}
           >
@@ -212,13 +254,73 @@ function PipelineNode({
         </div>
 
         {/* Status row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <StatusBadge status={data.status} />
-          {isRunning && data.progress > 0 && (
-            <span style={{ fontSize: '10px', color: meta.color, fontWeight: '600' }}>
-              {data.progress}%
-            </span>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <ConnectionBadge status={connectionStatus} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {(data.status !== 'idle') && <ExecutionBadge status={data.status} />}
+            {isRunning && data.progress > 0 && (
+              <span style={{ fontSize: '10px', color: meta.color, fontWeight: '600' }}>
+                {data.progress}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Connect/Disconnect */}
+        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isConnecting) return;
+              if (isConnected) {
+                disconnectNode(id);
+                return;
+              }
+              connectNode(id).catch(() => undefined);
+            }}
+            disabled={isConnecting}
+            style={{
+              padding: '5px 10px',
+              minWidth: '92px',
+              borderRadius: '5px',
+              fontSize: '11px',
+              fontWeight: 600,
+              border: `1.5px solid ${isConnected ? '#bbf7d0' : isDisconnected ? '#e2e8f0' : '#bfdbfe'}`,
+              backgroundColor: isConnected ? '#f0fdf4' : 'transparent',
+              color: isConnected ? '#15803d' : '#64748b',
+              cursor: isConnecting ? 'not-allowed' : 'pointer',
+              opacity: isConnecting ? 0.7 : 1,
+              fontFamily: "'Calibri', 'Lato', sans-serif",
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              if (isConnecting) return;
+              if (isConnected) {
+                el.style.borderColor = '#fca5a5';
+                el.style.backgroundColor = '#fff1f2';
+                el.style.color = '#dc2626';
+                return;
+              }
+              el.style.borderColor = '#93c5fd';
+              el.style.backgroundColor = '#eff6ff';
+              el.style.color = '#2563eb';
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLButtonElement;
+              if (isConnected) {
+                el.style.borderColor = '#bbf7d0';
+                el.style.backgroundColor = '#f0fdf4';
+                el.style.color = '#15803d';
+                return;
+              }
+              el.style.borderColor = '#e2e8f0';
+              el.style.backgroundColor = 'transparent';
+              el.style.color = '#64748b';
+            }}
+          >
+            {isConnected ? 'Disconnect' : isConnecting ? 'Connecting...' : 'Connect'}
+          </button>
         </div>
       </div>
 

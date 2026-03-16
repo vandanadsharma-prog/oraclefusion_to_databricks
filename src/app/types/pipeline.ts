@@ -8,6 +8,7 @@ export type NodeType =
   | 'databricks';
 
 export type NodeStatus = 'idle' | 'running' | 'success' | 'error' | 'waiting';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type ExecutionStatus = 'idle' | 'running' | 'success' | 'error';
 export type PipelineType = 'bicc' | 'goldengate' | 'rest-api' | 'jdbc' | 'custom';
 export type LogLevel = 'info' | 'success' | 'error' | 'warn' | 'debug';
@@ -68,6 +69,8 @@ export interface PipelineNodeData extends Record<string, unknown> {
   nodeType: NodeType;
   subtitle: string;
   config: NodeConfig;
+  connectionStatus: ConnectionStatus;
+  connectionError?: string;
   status: NodeStatus;
   progress: number;
   rowsProcessed?: number;
