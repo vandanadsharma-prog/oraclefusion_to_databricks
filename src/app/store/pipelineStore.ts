@@ -46,6 +46,7 @@ interface PipelineStore {
   stopPipeline: () => void;
   connectNode: (id: string) => Promise<void>;
   disconnectNode: (id: string) => void;
+  setActivePipelineName: (name: string) => void;
   savePipeline: () => Promise<void>;
   deleteActivePipeline: () => Promise<void>;
   setShowExecutionPanel: (show: boolean) => void;
@@ -500,11 +501,24 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
     scheduleSave(get);
   },
 
+  setActivePipelineName: (name) => {
+    set({ activePipelineName: name });
+    scheduleSave(get);
+  },
+
   savePipeline: async () => {
     const beUrl = backendUrl();
     if (!beUrl) return;
-    const { activePipelineId, activePipelineName, nodes, edges } = get();
-    if (!activePipelineId) return;
+    let { activePipelineId, activePipelineName } = get();
+    const { nodes, edges } = get();
+    if (!activePipelineId) {
+      activePipelineId = newPipelineId(nodes.length ? detectPipelineType(nodes) : 'custom');
+      set({ activePipelineId });
+    }
+    if (!activePipelineName || !activePipelineName.trim()) {
+      activePipelineName = 'Untitled Pipeline';
+      set({ activePipelineName });
+    }
 
     await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, {
       method: 'PUT',

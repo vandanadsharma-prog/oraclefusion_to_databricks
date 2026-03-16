@@ -13,6 +13,7 @@ import { usePipelineStore } from '../../store/pipelineStore';
 import { NODE_TYPES } from './CustomNodes';
 import type { NodeType, PipelineNodeData } from '../../types/pipeline';
 import type { Node } from '@xyflow/react';
+import { Save } from 'lucide-react';
 
 type PipelineNode = Node<PipelineNodeData>;
 
@@ -26,7 +27,16 @@ const PIPELINE_CURSOR_SVG_BASE64 =
 
 export function PipelineCanvas() {
   const {
-    nodes, edges, onNodesChange, onEdgesChange, onConnect, selectNode, addNode,
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    selectNode,
+    addNode,
+    activePipelineName,
+    setActivePipelineName,
+    savePipeline,
   } = usePipelineStore();
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -98,17 +108,62 @@ export function PipelineCanvas() {
         <Controls
           style={{ backgroundColor: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '6px' }}
         />
-        <MiniMap
-          style={{ backgroundColor: '#ffffff', border: '1.5px solid #e2e8f0' }}
-          nodeColor={(node) => {
-            const data = node.data as PipelineNodeData;
-            if (data.status === 'success') return '#16a34a';
-            if (data.status === 'running') return '#2563eb';
-            if (data.status === 'error') return '#dc2626';
-            return '#cbd5e1';
+        {nodes.length > 5 && (
+          <MiniMap
+            style={{ backgroundColor: '#ffffff', border: '1.5px solid #e2e8f0' }}
+            nodeColor={(node) => {
+              const data = node.data as PipelineNodeData;
+              if (data.status === 'success') return '#16a34a';
+              if (data.status === 'running') return '#2563eb';
+              if (data.status === 'error') return '#dc2626';
+              return '#cbd5e1';
+            }}
+            maskColor="rgba(245,247,250,0.7)"
+          />
+        )}
+
+        {/* Save */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 12,
+            bottom: nodes.length > 5 ? 155 : 12,
+            zIndex: 20,
+            pointerEvents: 'auto',
           }}
-          maskColor="rgba(245,247,250,0.7)"
-        />
+        >
+          <button
+            disabled={nodes.length === 0}
+            onClick={() => {
+              const current = (activePipelineName || '').trim() || 'Untitled Pipeline';
+              const typed = window.prompt('Pipeline name', current);
+              if (typed === null) return;
+              const name = typed.trim();
+              if (!name) return;
+              setActivePipelineName(name);
+              savePipeline().catch(() => undefined);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '7px 12px',
+              borderRadius: '6px',
+              border: '1.5px solid #e2e8f0',
+              backgroundColor: nodes.length === 0 ? '#f1f5f9' : '#ffffff',
+              color: nodes.length === 0 ? '#94a3b8' : '#64748b',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: nodes.length === 0 ? 'not-allowed' : 'pointer',
+              boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
+              fontFamily: "'Calibri', 'Lato', sans-serif",
+            }}
+            title={nodes.length === 0 ? 'Add nodes to enable saving' : 'Save pipeline to pipelines/ as JSON'}
+          >
+            <Save size={14} />
+            Save Pipeline
+          </button>
+        </div>
 
         {/* Empty state */}
         {nodes.length === 0 && (

@@ -15,6 +15,7 @@ router = APIRouter()
 
 
 _PIPELINE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+_SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 def _pipelines_dir() -> Path:
@@ -26,10 +27,31 @@ def _pipelines_dir() -> Path:
     return (project_root / base).resolve()
 
 
-def _pipeline_path(pipeline_id: str) -> Path:
+def _assert_pipeline_id(pipeline_id: str) -> None:
     if not _PIPELINE_ID_RE.fullmatch(pipeline_id or ""):
         raise HTTPException(status_code=400, detail="invalid pipeline_id")
-    return _pipelines_dir() / f"{pipeline_id}.json"
+
+
+def _safe_filename(name: str, pipeline_id: str) -> str:
+    cleaned = _SAFE_NAME_RE.sub("-", (name or "").strip()).strip("-")
+    if not cleaned:
+        cleaned = "pipeline"
+    cleaned = cleaned[:80]
+    return f"{cleaned}__{pipeline_id}.json"
+
+
+def _find_pipeline_file_by_id(pipeline_id: str) -> Path | None:
+    out_dir = _pipelines_dir()
+    if not out_dir.exists():
+        return None
+    for p in out_dir.glob("*.json"):
+        try:
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            if payload.get("id") == pipeline_id:
+                return p
+        except Exception:
+            continue
+    return None
 
 
 class PipelineDocument(BaseModel):
@@ -42,12 +64,22 @@ class PipelineDocument(BaseModel):
 
 @router.put("/pipelines/{pipeline_id}")
 async def save_pipeline(pipeline_id: str, doc: PipelineDocument) -> dict[str, Any]:
+    _assert_pipeline_id(pipeline_id)
     if doc.id != pipeline_id:
         raise HTTPException(status_code=400, detail="pipeline_id mismatch")
 
     out_dir = _pipelines_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = _pipeline_path(pipeline_id)
+
+    existing_path = _find_pipeline_file_by_id(pipeline_id)
+    out_path = out_dir / _safe_filename(doc.name, pipeline_id)
+    if existing_path and existing_path.resolve() != out_path.resolve():
+        try:
+            existing_path.replace(out_path)
+        except Exception:
+            # fallback: write to new path, leaving old file in place
+            pass
+
     tmp_path = out_path.with_suffix(".json.tmp")
 
     payload = doc.model_dump()
@@ -58,7 +90,10 @@ async def save_pipeline(pipeline_id: str, doc: PipelineDocument) -> dict[str, An
 
 @router.get("/pipelines/{pipeline_id}")
 async def get_pipeline(pipeline_id: str) -> dict[str, Any]:
-    path = _pipeline_path(pipeline_id)
+    _assert_pipeline_id(pipeline_id)
+    path = _find_pipeline_file_by_id(pipeline_id)
+    if not path:
+        raise HTTPException(status_code=404, detail="pipeline not found")
     if not path.exists():
         raise HTTPException(status_code=404, detail="pipeline not found")
     try:
@@ -69,8 +104,9 @@ async def get_pipeline(pipeline_id: str) -> dict[str, Any]:
 
 @router.delete("/pipelines/{pipeline_id}")
 async def delete_pipeline(pipeline_id: str) -> dict[str, Any]:
-    path = _pipeline_path(pipeline_id)
-    if not path.exists():
+    _assert_pipeline_id(pipeline_id)
+    path = _find_pipeline_file_by_id(pipeline_id)
+    if not path or not path.exists():
         return {"ok": True, "deleted": False}
     try:
         path.unlink()
@@ -84,7 +120,18 @@ async def list_pipelines() -> dict[str, Any]:
     out_dir = _pipelines_dir()
     if not out_dir.exists():
         return {"pipelines": []}
-    items = []
+    items: list[dict[str, Any]] = []
     for p in sorted(out_dir.glob("*.json")):
-        items.append(p.stem)
+        item: dict[str, Any] = {"id": p.stem}
+        try:
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            item["id"] = payload.get("id") or p.stem
+            item["name"] = payload.get("name") or item["id"]
+            item["updatedAtMs"] = payload.get("updatedAtMs")
+            item["fileName"] = p.name
+        except Exception:
+            item["id"] = p.stem
+            item["name"] = p.stem
+            item["fileName"] = p.name
+        items.append(item)
     return {"pipelines": items}

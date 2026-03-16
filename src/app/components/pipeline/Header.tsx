@@ -1,9 +1,11 @@
 import React from 'react';
-import { Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
+import { Database, LayoutGrid, Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { OracleLogo, DatabricksLogo } from './BrandLogos';
 
-export function Header() {
+type AppTab = 'designer' | 'metadata';
+
+export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: AppTab) => void }) {
   const {
     executionStatus,
     executionProgress,
@@ -48,23 +50,59 @@ export function Header() {
         </div>
       </div>
 
-      {/* Breadcrumb */}
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          fontSize: '12px', color: '#94a3b8',
-          borderLeft: '1.5px solid #e2e8f0', paddingLeft: '14px',
-        }}
-      >
-        <span>Pipeline Designer</span>
-        <ChevronRight size={11} />
-        <span style={{ color: '#64748b' }}>{nodes.length} node{nodes.length !== 1 ? 's' : ''}</span>
+      {/* Tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {[
+          { id: 'designer' as const, label: 'Designer', Icon: LayoutGrid },
+          { id: 'metadata' as const, label: 'Metadata', Icon: Database },
+        ].map(({ id, label, Icon }) => {
+          const active = tab === id;
+          return (
+            <button
+              key={id}
+              onClick={() => onTabChange(id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: `1.5px solid ${active ? '#93c5fd' : '#e2e8f0'}`,
+                backgroundColor: active ? '#eff6ff' : '#ffffff',
+                color: active ? '#2563eb' : '#64748b',
+                transition: 'all 0.15s',
+                fontFamily: "'Calibri', 'Lato', sans-serif",
+              }}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon size={13} />
+              {label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Breadcrumb */}
+      {tab === 'designer' && (
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontSize: '12px', color: '#94a3b8',
+            borderLeft: '1.5px solid #e2e8f0', paddingLeft: '14px',
+          }}
+        >
+          <span>Pipeline Designer</span>
+          <ChevronRight size={11} />
+          <span style={{ color: '#64748b' }}>{nodes.length} node{nodes.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
 
       <div style={{ flex: 1 }} />
 
       {/* Running progress */}
-      {isRunning && (
+      {tab === 'designer' && isRunning && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Activity size={13} style={{ color: '#2563eb' }} />
           <div
@@ -89,26 +127,28 @@ export function Header() {
       )}
 
       {/* Logs toggle */}
-      <button
-        onClick={() => setShowExecutionPanel(!showExecutionPanel)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '6px 12px',
-          borderRadius: '5px',
-          fontSize: '12px', cursor: 'pointer',
-          border: `1.5px solid ${showExecutionPanel ? '#2563eb' : '#e2e8f0'}`,
-          backgroundColor: showExecutionPanel ? '#eff6ff' : '#ffffff',
-          color: showExecutionPanel ? '#2563eb' : '#64748b',
-          transition: 'all 0.15s',
-          fontFamily: "'Calibri', 'Lato', sans-serif",
-        }}
-      >
-        <Terminal size={13} />
-        Execution Logs
-      </button>
+      {tab === 'designer' && (
+        <button
+          onClick={() => setShowExecutionPanel(!showExecutionPanel)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '5px',
+            fontSize: '12px', cursor: 'pointer',
+            border: `1.5px solid ${showExecutionPanel ? '#2563eb' : '#e2e8f0'}`,
+            backgroundColor: showExecutionPanel ? '#eff6ff' : '#ffffff',
+            color: showExecutionPanel ? '#2563eb' : '#64748b',
+            transition: 'all 0.15s',
+            fontFamily: "'Calibri', 'Lato', sans-serif",
+          }}
+        >
+          <Terminal size={13} />
+          Execution Logs
+        </button>
+      )}
 
       {/* Stop button */}
-      {isRunning && (
+      {tab === 'designer' && isRunning && (
         <button
           onClick={stopPipeline}
           style={{
@@ -125,45 +165,49 @@ export function Header() {
       )}
 
       {/* Run button */}
-      <button
-        onClick={runPipeline}
-        disabled={!canRun}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '7px',
-          padding: '7px 18px', borderRadius: '5px',
-          border: 'none',
-          backgroundColor: !canRun ? '#e2e8f0' : isSuccess ? '#16a34a' : '#2563eb',
-          color: !canRun ? '#94a3b8' : '#ffffff',
-          fontSize: '13px', fontWeight: '600',
-          cursor: canRun ? 'pointer' : 'not-allowed',
-          transition: 'background-color 0.2s',
-          fontFamily: "'Calibri', 'Lato', sans-serif",
-          boxShadow: canRun ? '0 1px 4px rgba(37,99,235,0.25)' : 'none',
-        }}
-      >
-        <Play size={13} />
-        {isRunning ? 'Running...' : isSuccess ? 'Run Again' : 'Run Pipeline'}
-      </button>
+      {tab === 'designer' && (
+        <button
+          onClick={runPipeline}
+          disabled={!canRun}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '7px',
+            padding: '7px 18px', borderRadius: '5px',
+            border: 'none',
+            backgroundColor: !canRun ? '#e2e8f0' : isSuccess ? '#16a34a' : '#2563eb',
+            color: !canRun ? '#94a3b8' : '#ffffff',
+            fontSize: '13px', fontWeight: '600',
+            cursor: canRun ? 'pointer' : 'not-allowed',
+            transition: 'background-color 0.2s',
+            fontFamily: "'Calibri', 'Lato', sans-serif",
+            boxShadow: canRun ? '0 1px 4px rgba(37,99,235,0.25)' : 'none',
+          }}
+        >
+          <Play size={13} />
+          {isRunning ? 'Running...' : isSuccess ? 'Run Again' : 'Run Pipeline'}
+        </button>
+      )}
 
       {/* Status pill */}
-      <div
-        style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '4px 10px', borderRadius: '9999px', fontSize: '11px',
-          border: `1px solid ${isRunning ? '#93c5fd' : isSuccess ? '#86efac' : isError ? '#fca5a5' : '#e2e8f0'}`,
-          backgroundColor: isRunning ? '#eff6ff' : isSuccess ? '#f0fdf4' : isError ? '#fef2f2' : '#f8fafc',
-          color: isRunning ? '#2563eb' : isSuccess ? '#16a34a' : isError ? '#dc2626' : '#94a3b8',
-          fontFamily: "'Calibri', 'Lato', sans-serif",
-        }}
-      >
+      {tab === 'designer' && (
         <div
           style={{
-            width: '7px', height: '7px', borderRadius: '50%',
-            backgroundColor: isRunning ? '#2563eb' : isSuccess ? '#16a34a' : isError ? '#dc2626' : '#cbd5e1',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '4px 10px', borderRadius: '9999px', fontSize: '11px',
+            border: `1px solid ${isRunning ? '#93c5fd' : isSuccess ? '#86efac' : isError ? '#fca5a5' : '#e2e8f0'}`,
+            backgroundColor: isRunning ? '#eff6ff' : isSuccess ? '#f0fdf4' : isError ? '#fef2f2' : '#f8fafc',
+            color: isRunning ? '#2563eb' : isSuccess ? '#16a34a' : isError ? '#dc2626' : '#94a3b8',
+            fontFamily: "'Calibri', 'Lato', sans-serif",
           }}
-        />
-        {isRunning ? 'Running' : isSuccess ? 'Success' : isError ? 'Error' : 'Idle'}
-      </div>
+        >
+          <div
+            style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              backgroundColor: isRunning ? '#2563eb' : isSuccess ? '#16a34a' : isError ? '#dc2626' : '#cbd5e1',
+            }}
+          />
+          {isRunning ? 'Running' : isSuccess ? 'Success' : isError ? 'Error' : 'Idle'}
+        </div>
+      )}
     </header>
   );
 }
