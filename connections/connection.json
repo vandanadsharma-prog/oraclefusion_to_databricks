@@ -1,0 +1,16 @@
+{
+  "connections": [
+    {
+      "id": "conn-kn27my-1773672956196",
+      "name": "Oracle_Fusion_Connection1",
+      "type": "oracle-fusion",
+      "config": {
+        "username": "PDB_ADMIN",
+        "password": "YourStrongPassword",
+        "host": "localhost",
+        "port": "1521"
+      },
+      "updatedAtMs": 1773672970375
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "goldengate-1773636237674-qxulvqy",
+  "name": "GoldenGate_to_Databricks",
+  "nodes": [
+    {
+      "id": "oracle-fusion-s7e9m1p",
+      "type": "oracle-fusion",
+      "position": {
+        "x": 10.89531924668991,
+        "y": 243.07603223484531
+      },
+      "data": {
+        "label": "Oracle Fusion",
+        "nodeType": "oracle-fusion",
+        "subtitle": "ERP Source Database",
+        "connectionStatus": "error",
+        "status": "idle",
+        "progress": 0,
+        "config": {
+          "host": "localhost",
+          "port": "1521",
+          "serviceName": "PDB2",
+          "username": "PDB_ADMIN",
+          "password": "YourStrongPassword",
+          "table": "GL_BALANCE_FACT",
+          "filterColumn": "LAST_UPDATE_DATE",
+          "filterValue": "2026-01-01"
+        },
+        "connectionError": "DPY-6005: cannot connect to database (CONNECTION_ID=Rxon4EMNfupz86gExpyAaw==).\n[WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    }
+  ],
+  "edges": [],
+  "updatedAtMs": 1773673043527
+}

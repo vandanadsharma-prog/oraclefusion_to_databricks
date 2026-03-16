@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, Save } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
-import type { NodeConfig, NodeType } from '../../types/pipeline';
+import { useConnectionsStore } from '../../store/connectionsStore';
+import type { NodeConfig, NodeType, ConnectionType } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
 import { BRAND_LOGOS } from './BrandLogos';
 
@@ -21,6 +22,53 @@ const inputBase: React.CSSProperties = {
   border: '1.5px solid #e2e8f0', backgroundColor: '#f8fafc',
   transition: 'border-color 0.15s', ...fontStyle,
 };
+
+function ConnectionPicker({
+  type,
+  onApply,
+}: {
+  type: ConnectionType;
+  onApply: (cfg: NodeConfig) => void;
+}) {
+  const { items, loadConnections } = useConnectionsStore();
+  const matches = items.filter((c) => c.type === type);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      loadConnections().catch(() => undefined);
+    }
+  }, [items.length, loadConnections]);
+
+  return (
+    <div>
+      <FieldLabel>Connection</FieldLabel>
+      <select
+        value=""
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === '__new__') {
+            window.dispatchEvent(new CustomEvent('open-connections-new'));
+            return;
+          }
+          const conn = matches.find((c) => c.id === val);
+          if (conn) {
+            const { table, tableName, path, container, ...rest } = conn.config as any;
+            onApply(rest);
+          }
+        }}
+        style={{ ...inputBase, cursor: 'pointer', boxSizing: 'border-box' }}
+        onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.backgroundColor = '#ffffff'; }}
+        onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; }}
+      >
+        <option value="">Select existing</option>
+        {matches.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+        <option value="__new__">Create new connection…</option>
+      </select>
+    </div>
+  );
+}
 
 function Field({
   label, value, onChange, type = 'text', placeholder = '',
@@ -110,6 +158,7 @@ function Section({ title }: { title: string }) {
 function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <ConnectionPicker type="oracle-fusion" onApply={(cfg) => onChange(cfg)} />
       <Section title="Connection Details" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Field label="Host" value={config.host} onChange={(v) => onChange({ host: v })} placeholder="localhost" />
@@ -131,6 +180,7 @@ function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange
 function BiccConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <ConnectionPicker type="bicc" onApply={(cfg) => onChange(cfg)} />
       <Section title="Export Settings" />
       <SelectField label="Export Format" value={config.format} onChange={(v) => onChange({ format: v as 'csv' | 'parquet' })}
         options={[{ value: 'csv', label: 'CSV (Comma-Separated)' }, { value: 'parquet', label: 'Parquet (columnar)' }]} />
@@ -190,6 +240,7 @@ function RestApiConfig({ config, onChange }: { config: NodeConfig; onChange: (c:
 function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <ConnectionPicker type="jdbc" onApply={(cfg) => onChange(cfg)} />
       <Section title="Connection" />
       <Field label="JDBC URL" value={config.jdbcUrl} onChange={(v) => onChange({ jdbcUrl: v })} placeholder="jdbc:oracle:thin:@localhost:1521/PDB2" />
       <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="PDB_ADMIN" />
@@ -206,6 +257,7 @@ function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
 function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <ConnectionPicker type="cloud-storage" onApply={(cfg) => onChange(cfg)} />
       <Section title="Storage" />
       <SelectField label="Storage Type" value={config.storageType} onChange={(v) => onChange({ storageType: v as 'adls' | 's3' | 'gcs' | 'local' })}
         options={[{ value: 'adls', label: 'Azure Data Lake Storage Gen2' }, { value: 's3', label: 'Amazon S3' }, { value: 'gcs', label: 'Google Cloud Storage' }, { value: 'local', label: 'Local Filesystem (dev)' }]} />
@@ -221,6 +273,7 @@ function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange
 function DatabricksConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <ConnectionPicker type="databricks" onApply={(cfg) => onChange(cfg)} />
       <Section title="Workspace" />
       <Field label="Workspace URL" value={config.workspaceUrl} onChange={(v) => onChange({ workspaceUrl: v })} placeholder="https://adb-xxx.azuredatabricks.net" />
       <Field label="Personal Access Token" value={config.accessToken} onChange={(v) => onChange({ accessToken: v })} type="password" placeholder="dapi..." />

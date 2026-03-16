@@ -4,6 +4,17 @@ import type { NodeType, PipelineType } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { BRAND_LOGOS, OracleLogo, DatabricksLogo, AzureLogo, JavaLogo } from './BrandLogos';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 
 interface PaletteNodeItem { type: NodeType; description: string }
 
@@ -39,7 +50,7 @@ const sectionLabel = (icon: React.ReactNode, title: string) => (
 );
 
 export function NodePalette() {
-  const { loadTemplate, deleteActivePipeline, activePipelineName } = usePipelineStore();
+  const { loadTemplate, clearCanvas, activePipelineName, nodes } = usePipelineStore();
 
   const onDragStart = (e: React.DragEvent, nodeType: NodeType) => {
     e.dataTransfer.setData('application/reactflow', nodeType);
@@ -168,38 +179,50 @@ export function NodePalette() {
 
       {/* Clear */}
       <div style={{ padding: '0 12px 12px' }}>
-        <button
-          onClick={() => {
-            const name = activePipelineName || 'Untitled Pipeline';
-            const typed = window.prompt(
-              `Are you sure you want to delete all components of this pipeline (${name})?\n\nType yes to confirm.`
-            );
-            if ((typed ?? '').trim().toLowerCase() !== 'yes') return;
-            deleteActivePipeline().catch(() => undefined);
-          }}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '6px', padding: '7px', borderRadius: '5px', fontSize: '12px',
-            border: '1.5px solid #e2e8f0', backgroundColor: 'transparent', color: '#94a3b8',
-            cursor: 'pointer', transition: 'all 0.15s',
-            fontFamily: "'Calibri', 'Lato', sans-serif",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.borderColor = '#fca5a5';
-            el.style.backgroundColor = '#fef2f2';
-            el.style.color = '#dc2626';
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.borderColor = '#e2e8f0';
-            el.style.backgroundColor = 'transparent';
-            el.style.color = '#94a3b8';
-          }}
-        >
-          <Trash2 size={12} />
-          Clear Canvas
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={nodes.length === 0}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: '6px', padding: '7px', borderRadius: '5px', fontSize: '12px',
+                border: '1.5px solid #e2e8f0', backgroundColor: 'transparent', color: nodes.length === 0 ? '#cbd5e1' : '#94a3b8',
+                cursor: nodes.length === 0 ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                fontFamily: "'Calibri', 'Lato', sans-serif",
+              }}
+              onMouseEnter={(e) => {
+                if (nodes.length === 0) return;
+                const el = e.currentTarget as HTMLElement;
+                el.style.borderColor = '#fca5a5';
+                el.style.backgroundColor = '#fef2f2';
+                el.style.color = '#dc2626';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.borderColor = '#e2e8f0';
+                el.style.backgroundColor = 'transparent';
+                el.style.color = nodes.length === 0 ? '#cbd5e1' : '#94a3b8';
+              }}
+            >
+              <Trash2 size={12} />
+              Clear Canvas
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear canvas?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes all nodes and edges from <strong>{(activePipelineName || 'Untitled Pipeline').trim()}</strong>.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => clearCanvas().catch(() => undefined)}>
+                Clear
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

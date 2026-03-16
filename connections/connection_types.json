@@ -1,0 +1,48 @@
+{
+  "jdbc": {
+    "fields": [
+      { "key": "jdbcUrl", "label": "JDBC URL" },
+      { "key": "username", "label": "Username" },
+      { "key": "password", "label": "Password", "kind": "password" },
+      { "key": "schema", "label": "Schema" },
+      { "key": "tableName", "label": "Table Name" }
+    ]
+  },
+  "oracle-fusion": {
+    "fields": [
+      { "key": "host", "label": "Host" },
+      { "key": "port", "label": "Port" },
+      { "key": "serviceName", "label": "Service Name" },
+      { "key": "username", "label": "Username" },
+      { "key": "password", "label": "Password", "kind": "password" },
+      { "key": "table", "label": "Table / View" }
+    ]
+  },
+  "bicc": {
+    "fields": [
+      { "key": "host", "label": "Host" },
+      { "key": "port", "label": "Port" },
+      { "key": "serviceName", "label": "Service Name" },
+      { "key": "username", "label": "Username" },
+      { "key": "password", "label": "Password", "kind": "password" },
+      { "key": "outputPath", "label": "Output Path" }
+    ]
+  },
+  "cloud-storage": {
+    "fields": [
+      { "key": "accountName", "label": "Account Name" },
+      { "key": "container", "label": "Container" },
+      { "key": "path", "label": "Base Path / Prefix" },
+      { "key": "accessKey", "label": "Access Key / SAS", "kind": "password" }
+    ]
+  },
+  "databricks": {
+    "fields": [
+      { "key": "workspaceUrl", "label": "Workspace URL" },
+      { "key": "accessToken", "label": "Access Token", "kind": "password" },
+      { "key": "catalog", "label": "Catalog" },
+      { "key": "schema", "label": "Schema" },
+      { "key": "tableName", "label": "Table Name" }
+    ]
+  }
+}

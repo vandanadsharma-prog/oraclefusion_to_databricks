@@ -12,6 +12,7 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 export type ExecutionStatus = 'idle' | 'running' | 'success' | 'error';
 export type PipelineType = 'bicc' | 'goldengate' | 'rest-api' | 'jdbc' | 'custom';
 export type LogLevel = 'info' | 'success' | 'error' | 'warn' | 'debug';
+export type ConnectionType = 'jdbc' | 'oracle-fusion' | 'bicc' | 'cloud-storage' | 'databricks';
 
 export interface NodeConfig {
   // Oracle Fusion
@@ -89,6 +90,23 @@ export interface ExecutionSummary {
   timeTakenMs: number;
   pipelineType: PipelineType;
 }
+
+export interface ConnectionInfo {
+  id: string;
+  name: string;
+  type: ConnectionType;
+  config: NodeConfig;
+  updatedAtMs?: number;
+}
+
+export type ConnectionField = {
+  key: string;
+  label: string;
+  kind?: 'text' | 'password' | 'number';
+  placeholder?: string;
+};
+
+export type ConnectionSchema = Partial<Record<ConnectionType, { fields: ConnectionField[] }>>;
 
 export const NODE_META: Record<NodeType, { label: string; subtitle: string; color: string; bgColor: string; textColor: string }> = {
   'oracle-fusion': {

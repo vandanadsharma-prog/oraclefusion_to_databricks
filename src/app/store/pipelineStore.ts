@@ -18,8 +18,25 @@ import type {
 import { TEMPLATES } from '../lib/templateData';
 
 type PipelineNode = Node<PipelineNodeData>;
+type Workspace = 'designer' | 'pipelines';
+
+type WorkspaceSnapshot = {
+  nodes: PipelineNode[];
+  edges: Edge[];
+  selectedNodeId: string | null;
+  activePipelineId: string | null;
+  activePipelineName: string;
+  showConfigPanel: boolean;
+  canvasEditable: boolean;
+};
 
 interface PipelineStore {
+  workspace: Workspace;
+  canvasEditable: boolean;
+  autoSaveEnabled: boolean;
+  workspaceSnapshots: Record<Workspace, WorkspaceSnapshot>;
+  hasChanges: boolean;
+
   nodes: PipelineNode[];
   edges: Edge[];
   selectedNodeId: string | null;
@@ -47,8 +64,12 @@ interface PipelineStore {
   connectNode: (id: string) => Promise<void>;
   disconnectNode: (id: string) => void;
   setActivePipelineName: (name: string) => void;
-  savePipeline: () => Promise<void>;
-  deleteActivePipeline: () => Promise<void>;
+  savePipeline: () => Promise<string | null>;
+  loadPipelineDocument: (doc: { id: string; name?: string; nodes: any[]; edges: any[] }) => void;
+  clearCanvas: () => Promise<void>;
+  resetDraft: () => Promise<void>;
+  setCanvasEditable: (editable: boolean) => void;
+  switchWorkspace: (workspace: Workspace) => void;
   setShowExecutionPanel: (show: boolean) => void;
   setShowConfigPanel: (show: boolean) => void;
 }
@@ -124,6 +145,7 @@ function newPipelineId(prefix: string) {
 }
 
 function scheduleSave(get: () => PipelineStore) {
+  if (!get().autoSaveEnabled) return;
   if (saveTimer !== null) window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
     get().savePipeline().catch(() => undefined);
@@ -140,11 +162,36 @@ function serializeNodes(nodes: PipelineNode[]) {
 }
 
 export const usePipelineStore = create<PipelineStore>()((set, get) => ({
-  nodes: TEMPLATES.bicc.nodes,
-  edges: TEMPLATES.bicc.edges,
+  workspace: 'designer',
+  canvasEditable: true,
+  autoSaveEnabled: false,
+  workspaceSnapshots: {
+    designer: {
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      activePipelineId: null,
+      activePipelineName: 'Untitled Pipeline',
+      showConfigPanel: false,
+      canvasEditable: true,
+    },
+    pipelines: {
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      activePipelineId: null,
+      activePipelineName: 'Untitled Pipeline',
+      showConfigPanel: false,
+      canvasEditable: false,
+    },
+  },
+  hasChanges: false,
+
+  nodes: [],
+  edges: [],
   selectedNodeId: null,
-  activePipelineId: newPipelineId('bicc'),
-  activePipelineName: TEMPLATES.bicc.name,
+  activePipelineId: null,
+  activePipelineName: 'Untitled Pipeline',
   executionStatus: 'idle',
   executionProgress: 0,
   executionLogs: [],
@@ -155,21 +202,25 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
   showConfigPanel: false,
 
   onNodesChange: (changes) => {
-    set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as PipelineNode[] }));
+    set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as PipelineNode[], hasChanges: true }));
     scheduleSave(get);
   },
 
   onEdgesChange: (changes) => {
-    set((state) => ({ edges: applyEdgeChanges(changes, state.edges) }));
+    set((state) => ({ edges: applyEdgeChanges(changes, state.edges), hasChanges: true }));
     scheduleSave(get);
   },
 
   onConnect: (connection) => {
-    set((state) => ({ edges: addEdge({ ...connection, animated: false }, state.edges) }));
+    set((state) => ({ edges: addEdge({ ...connection, animated: false }, state.edges), hasChanges: true }));
     scheduleSave(get);
   },
 
   selectNode: (id) => {
+    if (!get().canvasEditable) {
+      set({ selectedNodeId: null, showConfigPanel: false });
+      return;
+    }
     set({ selectedNodeId: id, showConfigPanel: id !== null });
   },
 
@@ -195,7 +246,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         progress: 0,
       },
     };
-    set((state) => ({ nodes: [...state.nodes, newNode] }));
+    set((state) => ({ nodes: [...state.nodes, newNode], hasChanges: true }));
     scheduleSave(get);
   },
 
@@ -214,6 +265,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
             }
           : n
       ),
+      hasChanges: true,
     }));
     scheduleSave(get);
   },
@@ -223,6 +275,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       nodes: state.nodes.map((n) =>
         n.data.nodeType === nodeType ? { ...n, data: { ...n.data, status } } : n
       ),
+      hasChanges: true,
     }));
   },
 
@@ -241,6 +294,8 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       executionSummary: null,
       showExecutionPanel: false,
       showConfigPanel: false,
+      canvasEditable: true,
+      hasChanges: true,
     });
     scheduleSave(get);
   },
@@ -422,6 +477,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'connecting', connectionError: undefined } } : n
       ),
+      hasChanges: true,
     }));
 
     const beUrl = backendUrl();
@@ -436,6 +492,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         nodes: state.nodes.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: 'backend_not_configured' } } : n
         ),
+        hasChanges: true,
       }));
       scheduleSave(get);
       return;
@@ -456,6 +513,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         nodes: state.nodes.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: msg } } : n
         ),
+        hasChanges: true,
       }));
       scheduleSave(get);
       return;
@@ -477,6 +535,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         nodes: state.nodes.map((n) =>
           n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'connected', connectionError: undefined } } : n
         ),
+        hasChanges: true,
       }));
       scheduleSave(get);
       return;
@@ -488,6 +547,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'error', connectionError: message } } : n
       ),
+      hasChanges: true,
     }));
     scheduleSave(get);
   },
@@ -497,18 +557,19 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, connectionStatus: 'disconnected', connectionError: undefined } } : n
       ),
+      hasChanges: true,
     }));
     scheduleSave(get);
   },
 
   setActivePipelineName: (name) => {
-    set({ activePipelineName: name });
+    set({ activePipelineName: name, hasChanges: true });
     scheduleSave(get);
   },
 
   savePipeline: async () => {
     const beUrl = backendUrl();
-    if (!beUrl) return;
+    if (!beUrl) return null;
     let { activePipelineId, activePipelineName } = get();
     const { nodes, edges } = get();
     if (!activePipelineId) {
@@ -520,7 +581,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       set({ activePipelineName });
     }
 
-    await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, {
+    const resp = await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -531,9 +592,48 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
         updatedAtMs: Date.now(),
       }),
     }).catch(() => undefined);
+
+    if (resp?.ok) {
+      set({ hasChanges: false });
+    }
+
+    return activePipelineId;
   },
 
-  deleteActivePipeline: async () => {
+  loadPipelineDocument: (doc) => {
+    executionAborted = true;
+    const { activeEventSource } = get();
+    if (activeEventSource) {
+      try {
+        activeEventSource.close();
+      } catch {
+        // ignore
+      }
+    }
+    const loadedNodes = (doc.nodes ?? []).map((n: any) => ({
+      ...n,
+      data: { ...(n.data ?? {}), status: 'idle', progress: 0 },
+    })) as PipelineNode[];
+    set({
+      nodes: loadedNodes,
+      edges: (doc.edges ?? []) as Edge[],
+      selectedNodeId: null,
+      activePipelineId: doc.id ?? null,
+      activePipelineName: (doc.name ?? 'Untitled Pipeline') as string,
+      executionStatus: 'idle',
+      executionProgress: 0,
+      executionLogs: [],
+      executionSummary: null,
+      activeRunId: null,
+      activeEventSource: null,
+      showExecutionPanel: false,
+      showConfigPanel: false,
+      canvasEditable: false,
+      hasChanges: false,
+    });
+  },
+
+  clearCanvas: async () => {
     executionAborted = true;
     if (saveTimer !== null) {
       window.clearTimeout(saveTimer);
@@ -541,7 +641,7 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
     }
 
     const beUrl = backendUrl();
-    const { activePipelineId, activeEventSource, activeRunId } = get();
+    const { activeEventSource, activeRunId } = get();
     if (activeEventSource) {
       try {
         activeEventSource.close();
@@ -552,16 +652,11 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
     if (beUrl && activeRunId) {
       fetch(`${beUrl}/api/runs/${activeRunId}/stop`, { method: 'POST' }).catch(() => undefined);
     }
-    if (beUrl && activePipelineId) {
-      await fetch(`${beUrl}/api/pipelines/${activePipelineId}`, { method: 'DELETE' }).catch(() => undefined);
-    }
 
-    set({
+    set((state) => ({
       nodes: [],
       edges: [],
       selectedNodeId: null,
-      activePipelineId: null,
-      activePipelineName: 'Untitled Pipeline',
       executionStatus: 'idle',
       executionProgress: 0,
       executionLogs: [],
@@ -570,6 +665,97 @@ export const usePipelineStore = create<PipelineStore>()((set, get) => ({
       activeEventSource: null,
       showExecutionPanel: false,
       showConfigPanel: false,
+      // keep pipeline id/name so "clear canvas" clears components but doesn't delete pipeline
+      canvasEditable: state.workspace === 'designer' ? true : state.canvasEditable,
+      hasChanges: true,
+    }));
+  },
+
+  resetDraft: async () => {
+    if (get().workspace !== 'designer') return;
+    await get().clearCanvas();
+    set((state) => ({
+      activePipelineId: null,
+      activePipelineName: 'Untitled Pipeline',
+      canvasEditable: true,
+      workspaceSnapshots: {
+        ...state.workspaceSnapshots,
+        designer: {
+          ...state.workspaceSnapshots.designer,
+          nodes: [],
+          edges: [],
+          selectedNodeId: null,
+          activePipelineId: null,
+          activePipelineName: 'Untitled Pipeline',
+          showConfigPanel: false,
+          canvasEditable: true,
+        },
+      },
+      hasChanges: false,
+    }));
+  },
+
+  setCanvasEditable: (editable) => {
+    set({
+      canvasEditable: editable,
+      selectedNodeId: editable ? get().selectedNodeId : null,
+      showConfigPanel: editable ? get().showConfigPanel : false,
+    });
+  },
+
+  switchWorkspace: (workspace) => {
+    const { activeEventSource } = get();
+    if (activeEventSource) {
+      try {
+        activeEventSource.close();
+      } catch {
+        // ignore
+      }
+    }
+
+    const current = get();
+    if (current.workspace === workspace) return;
+
+    const nextSnapshots = { ...current.workspaceSnapshots };
+
+    nextSnapshots[current.workspace] = {
+      nodes: current.nodes,
+      edges: current.edges,
+      selectedNodeId: current.selectedNodeId,
+      activePipelineId: current.activePipelineId,
+      activePipelineName: current.activePipelineName,
+      showConfigPanel: current.showConfigPanel,
+      canvasEditable: current.workspace === 'designer' ? true : current.canvasEditable,
+    };
+
+    const incoming = nextSnapshots[workspace] ?? {
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      activePipelineId: null,
+      activePipelineName: 'Untitled Pipeline',
+      showConfigPanel: false,
+      canvasEditable: workspace === 'designer',
+    };
+
+    set({
+      workspace,
+      nodes: incoming.nodes,
+      edges: incoming.edges,
+      selectedNodeId: incoming.selectedNodeId,
+      activePipelineId: incoming.activePipelineId,
+      activePipelineName: incoming.activePipelineName,
+      showConfigPanel: incoming.showConfigPanel,
+      canvasEditable: workspace === 'designer' ? true : Boolean(incoming.canvasEditable),
+      workspaceSnapshots: nextSnapshots,
+      hasChanges: false,
+      executionStatus: 'idle',
+      executionProgress: 0,
+      executionLogs: [],
+      executionSummary: null,
+      activeRunId: null,
+      activeEventSource: null,
+      showExecutionPanel: false,
     });
   },
 

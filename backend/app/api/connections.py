@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -10,10 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.models import NodeConfig, NodeType
+from app.core.config import settings
 
 
 router = APIRouter()
@@ -27,6 +29,157 @@ class ConnectionTestRequest(BaseModel):
 class ConnectionTestResponse(BaseModel):
     ok: bool
     message: str
+
+
+class ConnectionDocument(BaseModel):
+    id: str
+    name: str
+    type: NodeType
+    config: NodeConfig = Field(default_factory=NodeConfig)
+    updatedAtMs: int | None = None
+
+
+def _connections_dir() -> Path:
+    base = Path(settings.connections_dir)
+    if base.is_absolute():
+        return base
+    project_root = Path(__file__).resolve().parents[3]
+    return (project_root / base).resolve()
+
+
+def _connections_file() -> Path:
+    return _connections_dir() / "connection.json"
+
+
+def _schema_file() -> Path:
+    return _connections_dir() / "connection_types.json"
+
+
+SCHEMA_FALLBACK: dict[str, Any] = {
+    "jdbc": {
+        "fields": [
+            {"key": "jdbcUrl", "label": "JDBC URL"},
+            {"key": "username", "label": "Username"},
+            {"key": "password", "label": "Password", "kind": "password"},
+            {"key": "schema", "label": "Schema"},
+            {"key": "tableName", "label": "Table Name"},
+        ]
+    },
+    "oracle-fusion": {
+        "fields": [
+            {"key": "host", "label": "Host"},
+            {"key": "port", "label": "Port"},
+            {"key": "serviceName", "label": "Service Name"},
+            {"key": "username", "label": "Username"},
+            {"key": "password", "label": "Password", "kind": "password"},
+            {"key": "table", "label": "Table / View"},
+        ]
+    },
+    "bicc": {
+        "fields": [
+            {"key": "host", "label": "Host"},
+            {"key": "port", "label": "Port"},
+            {"key": "serviceName", "label": "Service Name"},
+            {"key": "username", "label": "Username"},
+            {"key": "password", "label": "Password", "kind": "password"},
+            {"key": "outputPath", "label": "Output Path"},
+        ]
+    },
+    "cloud-storage": {
+        "fields": [
+            {"key": "accountName", "label": "Account Name"},
+            {"key": "container", "label": "Container"},
+            {"key": "path", "label": "Base Path"},
+            {"key": "accessKey", "label": "Access Key / SAS", "kind": "password"},
+        ]
+    },
+    "databricks": {
+        "fields": [
+            {"key": "workspaceUrl", "label": "Workspace URL"},
+            {"key": "accessToken", "label": "Access Token", "kind": "password"},
+            {"key": "catalog", "label": "Catalog"},
+            {"key": "schema", "label": "Schema"},
+            {"key": "tableName", "label": "Table Name"},
+        ]
+    },
+}
+
+
+def _load_connections() -> list[dict[str, Any]]:
+    path = _connections_file()
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload.get("connections", [])
+    except Exception:
+        return []
+
+
+def _write_connections(items: list[dict[str, Any]]) -> None:
+    out_dir = _connections_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tmp_path = _connections_file().with_suffix(".tmp")
+    payload = {"connections": items}
+    tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp_path.replace(_connections_file())
+
+
+def _load_schema() -> dict[str, Any]:
+    path = _schema_file()
+    if not path.exists():
+        return SCHEMA_FALLBACK
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload or SCHEMA_FALLBACK
+    except Exception:
+        return SCHEMA_FALLBACK
+
+
+@router.get("/connections")
+async def list_connections() -> dict[str, Any]:
+    return {"connections": _load_connections()}
+
+
+@router.get("/connections/schema")
+async def get_connection_schema() -> dict[str, Any]:
+    return {"schema": _load_schema()}
+
+
+@router.get("/connections/{connection_id}")
+async def get_connection(connection_id: str) -> dict[str, Any]:
+    items = _load_connections()
+    for item in items:
+        if item.get("id") == connection_id:
+            return item
+    raise HTTPException(status_code=404, detail="connection not found")
+
+
+@router.put("/connections/{connection_id}")
+async def save_connection(connection_id: str, doc: ConnectionDocument) -> dict[str, Any]:
+    if doc.id != connection_id:
+        raise HTTPException(status_code=400, detail="connection_id mismatch")
+    items = _load_connections()
+    updated = False
+    for idx, item in enumerate(items):
+        if item.get("id") == connection_id:
+            items[idx] = doc.model_dump()
+            updated = True
+            break
+    if not updated:
+        items.append(doc.model_dump())
+    _write_connections(items)
+    return {"ok": True, "id": connection_id}
+
+
+@router.delete("/connections/{connection_id}")
+async def delete_connection(connection_id: str) -> dict[str, Any]:
+    items = _load_connections()
+    next_items = [i for i in items if i.get("id") != connection_id]
+    if len(next_items) == len(items):
+        return {"ok": True, "deleted": False}
+    _write_connections(next_items)
+    return {"ok": True, "deleted": True}
 
 
 _JDBC_THIN_RE = re.compile(

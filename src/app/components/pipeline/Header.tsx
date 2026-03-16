@@ -1,9 +1,10 @@
 import React from 'react';
-import { Database, LayoutGrid, Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
+import { LayoutGrid, FolderGit2, Plug, Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { OracleLogo, DatabricksLogo } from './BrandLogos';
+import InfoBeansLogo from '../../../../images/Infobeans_Logo.png';
 
-type AppTab = 'designer' | 'metadata';
+type AppTab = 'pipelines' | 'connections' | 'designer';
 
 export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: AppTab) => void }) {
   const {
@@ -20,6 +21,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
   const isSuccess = executionStatus === 'success';
   const isError = executionStatus === 'error';
   const canRun = nodes.length > 0 && !isRunning;
+  const showCanvasControls = tab === 'designer' || tab === 'pipelines';
 
   return (
     <header
@@ -33,28 +35,30 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
         gap: '14px',
         flexShrink: 0,
         fontFamily: "'Calibri', 'Lato', sans-serif",
+        position: 'relative',
       }}
     >
       {/* Brand identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '64px' }}>
         <OracleLogo size={22} />
         <ChevronRight size={14} style={{ color: '#94a3b8' }} />
         <DatabricksLogo size={22} />
         <div style={{ marginLeft: '4px', borderLeft: '1.5px solid #e2e8f0', paddingLeft: '12px' }}>
           <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600', lineHeight: '1.2' }}>
-            Fusion Ingest
+            Oracle Fusion To Databricks 
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.2' }}>
-            Oracle Fusion to Databricks Unity Catalog
+            Oracle Fusion to Databricks Unity Catalog Pipeline Builder
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '16px' }}>
         {[
+          { id: 'pipelines' as const, label: 'Pipelines', Icon: FolderGit2 },
+          { id: 'connections' as const, label: 'Connections', Icon: Plug },
           { id: 'designer' as const, label: 'Designer', Icon: LayoutGrid },
-          { id: 'metadata' as const, label: 'Metadata', Icon: Database },
         ].map(({ id, label, Icon }) => {
           const active = tab === id;
           return (
@@ -85,7 +89,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       </div>
 
       {/* Breadcrumb */}
-      {tab === 'designer' && (
+      {showCanvasControls && (
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
@@ -93,7 +97,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
             borderLeft: '1.5px solid #e2e8f0', paddingLeft: '14px',
           }}
         >
-          <span>Pipeline Designer</span>
+          <span>{tab === 'pipelines' ? 'Pipelines' : 'Pipeline Designer'}</span>
           <ChevronRight size={11} />
           <span style={{ color: '#64748b' }}>{nodes.length} node{nodes.length !== 1 ? 's' : ''}</span>
         </div>
@@ -101,8 +105,23 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
 
       <div style={{ flex: 1 }} />
 
+      {/* InfoBeans logo bottom-left */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 10,
+          bottom: 6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          pointerEvents: 'none',
+        }}
+      >
+        <img src={InfoBeansLogo} alt="InfoBeans" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+      </div>
+
       {/* Running progress */}
-      {tab === 'designer' && isRunning && (
+      {showCanvasControls && isRunning && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Activity size={13} style={{ color: '#2563eb' }} />
           <div
@@ -127,7 +146,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       )}
 
       {/* Logs toggle */}
-      {tab === 'designer' && (
+      {showCanvasControls && (
         <button
           onClick={() => setShowExecutionPanel(!showExecutionPanel)}
           style={{
@@ -148,7 +167,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       )}
 
       {/* Stop button */}
-      {tab === 'designer' && isRunning && (
+      {showCanvasControls && isRunning && (
         <button
           onClick={stopPipeline}
           style={{
@@ -165,7 +184,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       )}
 
       {/* Run button */}
-      {tab === 'designer' && (
+      {showCanvasControls && (
         <button
           onClick={runPipeline}
           disabled={!canRun}
@@ -188,7 +207,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       )}
 
       {/* Status pill */}
-      {tab === 'designer' && (
+      {showCanvasControls && (
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',

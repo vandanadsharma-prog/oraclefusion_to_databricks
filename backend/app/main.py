@@ -8,7 +8,7 @@ from app.core.config import settings
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Fusion Ingest Backend", version="0.1.0")
+    app = FastAPI(title="Oracle Data Ingestion Backend", version="0.1.0")
 
     app.add_middleware(
         CORSMiddleware,
