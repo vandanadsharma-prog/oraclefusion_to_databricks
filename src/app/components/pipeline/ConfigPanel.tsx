@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Save, Settings2 } from 'lucide-react';
+import { X, Eye, EyeOff, Save, Settings2, List, Play, FileJson } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
 import type { NodeConfig, NodeType } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
@@ -115,11 +115,11 @@ function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange
         <Field label="Host" value={config.host} onChange={(v) => onChange({ host: v })} placeholder="localhost" />
         <Field label="Port" value={config.port} onChange={(v) => onChange({ port: v })} placeholder="1521" />
       </div>
-      <Field label="Service Name" value={config.serviceName} onChange={(v) => onChange({ serviceName: v })} placeholder="ORCLPDB1" />
-      <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="FUSION_USER" />
+      <Field label="Service Name" value={config.serviceName} onChange={(v) => onChange({ serviceName: v })} placeholder="PDB2" />
+      <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="PDB_ADMIN" />
       <Field label="Password" value={config.password} onChange={(v) => onChange({ password: v })} type="password" />
       <Section title="Source Table" />
-      <Field label="Table / View" value={config.table} onChange={(v) => onChange({ table: v })} placeholder="GL_JE_HEADERS" />
+      <Field label="Table / View" value={config.table} onChange={(v) => onChange({ table: v })} placeholder="GL_BALANCE_FACT" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Field label="Filter Column" value={config.filterColumn} onChange={(v) => onChange({ filterColumn: v })} placeholder="LAST_UPDATE_DATE" />
         <Field label="Filter Value" value={config.filterValue} onChange={(v) => onChange({ filterValue: v })} placeholder="2026-01-01" />
@@ -137,7 +137,7 @@ function BiccConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
       <SelectField label="Export Type" value={config.exportType} onChange={(v) => onChange({ exportType: v as 'full' | 'incremental' })}
         options={[{ value: 'full', label: 'Full Export' }, { value: 'incremental', label: 'Incremental (lastUpdateDate)' }]} />
       <Section title="Output" />
-      <Field label="Output Path" value={config.outputPath} onChange={(v) => onChange({ outputPath: v })} placeholder="./data/bicc/" />
+      <Field label="Output Path" value={config.outputPath} onChange={(v) => onChange({ outputPath: v })} placeholder=".\\data\\bicc\\" />
       <SelectField label="Schedule" value={config.schedule} onChange={(v) => onChange({ schedule: v as 'immediate' | 'cron' })}
         options={[{ value: 'immediate', label: 'Immediate (on-demand)' }, { value: 'cron', label: 'Cron schedule' }]} />
       {config.schedule === 'cron' && (
@@ -151,10 +151,10 @@ function GoldenGateConfig({ config, onChange }: { config: NodeConfig; onChange: 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <Section title="GoldenGate Installation" />
-      <Field label="Install Path" value={config.installPath} onChange={(v) => onChange({ installPath: v })} placeholder="/opt/goldengate/21c" />
+      <Field label="Install Path" value={config.installPath} onChange={(v) => onChange({ installPath: v })} placeholder="C:\\app\\golden_gate\\oracle_golden_gate" />
       <Section title="Extract Configuration" />
       <Field label="Extract Name" value={config.extractName} onChange={(v) => onChange({ extractName: v })} placeholder="E_ORA21C" />
-      <Field label="Trail File Location" value={config.trailFileLocation} onChange={(v) => onChange({ trailFileLocation: v })} placeholder="/gg/dirdat/aa" />
+      <Field label="Trail File Location" value={config.trailFileLocation} onChange={(v) => onChange({ trailFileLocation: v })} placeholder="C:\\app\\golden_gate\\oracle_golden_gate\\dirdat\\aa" />
       <Section title="Replicat Target" />
       <Field label="Replicat Name" value={config.replicatName} onChange={(v) => onChange({ replicatName: v })} placeholder="R_DBX" />
       <SelectField label="Databricks Connector" value={config.databricksConnector} onChange={(v) => onChange({ databricksConnector: v })}
@@ -191,8 +191,8 @@ function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <Section title="Connection" />
-      <Field label="JDBC URL" value={config.jdbcUrl} onChange={(v) => onChange({ jdbcUrl: v })} placeholder="jdbc:oracle:thin:@localhost:1521/ORCLPDB1" />
-      <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="FUSION_USER" />
+      <Field label="JDBC URL" value={config.jdbcUrl} onChange={(v) => onChange({ jdbcUrl: v })} placeholder="jdbc:oracle:thin:@localhost:1521/PDB2" />
+      <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="PDB_ADMIN" />
       <Field label="Password" value={config.password} onChange={(v) => onChange({ password: v })} type="password" />
       <Section title="Query" />
       <TextareaField label="SQL Query" value={config.query} onChange={(v) => onChange({ query: v })}
@@ -210,7 +210,7 @@ function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange
       <SelectField label="Storage Type" value={config.storageType} onChange={(v) => onChange({ storageType: v as 'adls' | 's3' | 'gcs' | 'local' })}
         options={[{ value: 'adls', label: 'Azure Data Lake Storage Gen2' }, { value: 's3', label: 'Amazon S3' }, { value: 'gcs', label: 'Google Cloud Storage' }, { value: 'local', label: 'Local Filesystem (dev)' }]} />
       <Field label="Container / Bucket" value={config.container} onChange={(v) => onChange({ container: v })} placeholder="oracle-data" />
-      <Field label="Path / Prefix" value={config.path} onChange={(v) => onChange({ path: v })} placeholder="/oracle/exports/" />
+      <Field label="Path / Prefix" value={config.path} onChange={(v) => onChange({ path: v })} placeholder="C:\\oracle\\exports\\" />
       <Section title="Credentials" />
       <Field label="Account Name" value={config.accountName} onChange={(v) => onChange({ accountName: v })} placeholder="myadlsaccount" />
       <Field label="Access Key / SAS Token" value={config.accessKey} onChange={(v) => onChange({ accessKey: v })} type="password" />
@@ -252,19 +252,62 @@ const CONFIG_COMPONENTS: Partial<Record<NodeType, React.ComponentType<{ config: 
 };
 
 export function ConfigPanel() {
-  const { nodes, selectedNodeId, showConfigPanel, updateNodeConfig, setShowConfigPanel } = usePipelineStore();
+  // @ts-ignore - Assuming setNodes/setEdges/currentPipelineName exist or will be added to store for this feature
+  const { nodes, edges, selectedNodeId, showConfigPanel, updateNodeConfig, setShowConfigPanel, setNodes, setEdges } = usePipelineStore();
   const [localConfig, setLocalConfig] = useState<NodeConfig>({});
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pipelines' | 'config'>('config');
+  const [pipelines, setPipelines] = useState<string[]>([]);
+  const [pipelineName, setPipelineName] = useState('');
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   useEffect(() => {
-    if (node) setLocalConfig({ ...node.data.config });
+    if (node) {
+      setLocalConfig({ ...node.data.config });
+      setActiveTab('config');
+    }
     setSaved(false);
-  }, [selectedNodeId]);
+  }, [selectedNodeId, node]);
 
-  if (!showConfigPanel || !node) return null;
+  useEffect(() => {
+    if (activeTab === 'pipelines') {
+      // Fetch pipelines from backend
+      fetch('http://localhost:9000/pipelines')
+        .then(res => res.json())
+        .then(data => setPipelines(data.pipelines || []))
+        .catch(err => console.error("Failed to fetch pipelines", err));
+    }
+  }, [activeTab]);
 
+  if (!showConfigPanel) return null;
+
+  // Logic to load a pipeline from the list
+  const loadPipeline = async (name: string) => {
+    try {
+      const res = await fetch(`http://localhost:9000/pipelines/${name}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (setNodes && setEdges) {
+            setNodes(data.nodes || []);
+            setEdges(data.edges || []);
+            setPipelineName(name.replace('.json', ''));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load pipeline", e);
+    }
+  };
+
+  const handleSavePipeline = async () => {
+    if (!pipelineName) return;
+    const payload = { name: pipelineName, nodes, edges };
+    await fetch('http://localhost:9000/pipelines', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json'} });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  // Prepare render helpers for Node Config
   const meta = NODE_META[node.data.nodeType];
   const Logo = BRAND_LOGOS[node.data.nodeType];
   const ConfigComponent = CONFIG_COMPONENTS[node.data.nodeType];
@@ -282,15 +325,79 @@ export function ConfigPanel() {
     }
   };
 
+  // Common styling
+  const tabStyle = (isActive: boolean): React.CSSProperties => ({
+    flex: 1, padding: '8px', cursor: 'pointer', textAlign: 'center', fontSize: '12px', fontWeight: 600,
+    borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
+    color: isActive ? '#2563eb' : '#64748b', backgroundColor: isActive ? '#f8fafc' : 'transparent',
+    ...fontStyle
+  });
+
   return (
     <div
       style={{
         width: '320px', flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%',
         backgroundColor: '#ffffff', borderLeft: '1.5px solid #e2e8f0',
         fontFamily: "'Calibri', 'Lato', sans-serif",
+        boxShadow: '-2px 0 5px rgba(0,0,0,0.02)'
       }}
     >
-      {/* Header */}
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={tabStyle(activeTab === 'pipelines')} onClick={() => setActiveTab('pipelines')}>
+            <List size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />Pipelines
+        </div>
+        <div style={tabStyle(activeTab === 'config')} onClick={() => setActiveTab('config')}>
+            <Settings2 size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />Configuration
+        </div>
+        <button
+          onClick={() => setShowConfigPanel(false)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 12px', borderBottom: '2px solid transparent' }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {activeTab === 'pipelines' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflowY: 'auto' }}>
+            <Section title="Available Pipelines" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pipelines.map(p => (
+                    <div key={p} onClick={() => loadPipeline(p)} style={{
+                        padding: '8px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#334155'
+                    }}>
+                        <FileJson size={14} color="#2563eb" />
+                        {p}
+                    </div>
+                ))}
+                {pipelines.length === 0 && <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>No pipelines found.</div>}
+            </div>
+
+            <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                <Section title="Save Current Pipeline" />
+                <Field label="Pipeline Name" value={pipelineName} onChange={setPipelineName} placeholder="my_pipeline" />
+                <button
+                    onClick={handleSavePipeline}
+                    style={{
+                        width: '100%', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: '7px', padding: '8px', borderRadius: '5px', fontSize: '13px', fontWeight: '600',
+                        border: `1.5px solid ${saved ? '#86efac' : '#bfdbfe'}`,
+                        backgroundColor: saved ? '#f0fdf4' : '#eff6ff',
+                        color: saved ? '#15803d' : '#2563eb',
+                        cursor: 'pointer', transition: 'all 0.15s', ...fontStyle
+                    }}
+                >
+                    <Save size={13} />
+                    {saved ? 'Pipeline Saved' : 'Save Pipeline'}
+                </button>
+            </div>
+        </div>
+      )}
+
+      {activeTab === 'config' && node && (
+      <>
+        {/* Header (Node) */}
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
@@ -310,12 +417,6 @@ export function ConfigPanel() {
           <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600' }}>{meta.label}</div>
           <div style={{ fontSize: '10px', color: meta.textColor }}>{meta.subtitle}</div>
         </div>
-        <button
-          onClick={() => setShowConfigPanel(false)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}
-        >
-          <X size={15} />
-        </button>
       </div>
 
       {/* Node ID */}
@@ -350,6 +451,14 @@ export function ConfigPanel() {
           {saved ? 'Configuration Saved' : 'Save Configuration'}
         </button>
       </div>
+      </>
+      )}
+
+      {activeTab === 'config' && !node && (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+            Select a node on the canvas to configure it.
+        </div>
+      )}
     </div>
   );
 }

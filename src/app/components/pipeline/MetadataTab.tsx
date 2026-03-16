@@ -38,7 +38,7 @@ function isSecretKey(key: string) {
 function displayValue(key: string, value: unknown) {
   if (isSecretKey(key)) {
     if (value === undefined || value === null || value === '') return '';
-    return '••••••••';
+    return 'YourStrongPassword';
   }
   if (value === undefined || value === null) return '';
   if (typeof value === 'string') return value;

@@ -23,7 +23,7 @@ $env:VITE_BACKEND_URL="http://localhost:9000"
 npm run dev
 ```
 
-If you use masked passwords (e.g. `••••••••`) in the UI, set:
+If you use masked passwords (e.g. `YourStrongPassword`) in the UI, set:
 
 ```powershell
 $env:BACKEND_ORACLE_PASSWORD="your_password"

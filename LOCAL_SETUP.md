@@ -98,10 +98,10 @@ If you don’t see anything listening on `:1521`, the listener likely isn’t ru
 The tool needs:
 - host (usually `localhost`)
 - port (usually `1521`)
-- **service name** (common examples: `ORCLPDB1` or `XEPDB1`)
+- **service name** (common examples: `PDB2` or `XEPDB1`)
 
 If you installed Oracle XE 21c, the PDB service is commonly `XEPDB1`.
-If you installed Oracle Database 21c with a default container, it’s often `ORCLPDB1`.
+If you installed Oracle Database 21c with a default container, it’s often `PDB2`.
 
 Optional: you can also run this to see services known to the listener:
 
@@ -109,7 +109,7 @@ Optional: you can also run this to see services known to the listener:
 lsnrctl status
 ```
 
-Look for lines like `Service "ORCLPDB1" has 1 instance(s).`
+Look for lines like `Service "PDB2" has 1 instance(s).`
 
 ### 6.2 Create demo tables + user (recommended)
 
@@ -120,7 +120,7 @@ Run it in your PDB using SQL*Plus (ships with Oracle DB):
 
 ```powershell
 cd c:\Users\HP\Documents\Jobs\InfoBeans\Projects\oraclefusion_to_databricks
-sqlplus system@localhost:1521/ORCLPDB1
+sqlplus system@localhost:1521/PDB2
 ```
 
 Then inside SQL*Plus:
@@ -130,27 +130,27 @@ Then inside SQL*Plus:
 ```
 
 It creates:
-- user: `FUSION_USER`
+- user: `PDB_ADMIN`
 - password: `FusionPass123`
 - tables used by the templates:
-  - `FUSION_USER.GL_JE_HEADERS`
-  - `FUSION_USER.AP_INVOICES_ALL`
-  - `FUSION_USER.OE_ORDER_HEADERS_ALL`
+  - `PDB_ADMIN.GL_BALANCE_FACT`
+  - `PDB_ADMIN.AP_INVOICES_ALL`
+  - `PDB_ADMIN.OE_ORDER_HEADERS_ALL`
 
 ### 6.3 Put Oracle connection values into the UI
 
 In the UI, click the **Oracle Fusion** node and set:
 - `host`: `localhost`
 - `port`: `1521`
-- `serviceName`: `ORCLPDB1` (or your PDB service, e.g. `XEPDB1`)
-- `username`: `FUSION_USER`
+- `serviceName`: `PDB2` (or your PDB service, e.g. `XEPDB1`)
+- `username`: `PDB_ADMIN`
 - `password`: `FusionPass123`
-- `table`: `FUSION_USER.GL_JE_HEADERS` (for the BICC template)
+- `table`: `PDB_ADMIN.GL_BALANCE_FACT` (for the BICC template)
 - `filterColumn` / `filterValue` (optional)
 
 ### 6.4 Masked password handling (important)
 
-Some templates show passwords as `••••••••`. If you leave that masked value in the UI, the backend will NOT know your real password.
+Some templates show passwords as `YourStrongPassword`. If you leave that masked value in the UI, the backend will NOT know your real password.
 
 Fix: set an environment variable before starting the backend:
 

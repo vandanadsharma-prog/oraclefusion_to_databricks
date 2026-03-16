@@ -1,0 +1,95 @@
+{
+  "id": "goldengate-1773636237674-qxulvqy",
+  "name": "GoldenGate_to_Databricks",
+  "nodes": [
+    {
+      "id": "oracle-1",
+      "type": "oracle-fusion",
+      "position": {
+        "x": 80,
+        "y": 200
+      },
+      "data": {
+        "status": "idle",
+        "progress": 0,
+        "connectionStatus": "connected",
+        "label": "Oracle Fusion",
+        "nodeType": "oracle-fusion",
+        "subtitle": "localhost:1521/PDB2",
+        "config": {
+          "host": "localhost",
+          "port": "1521",
+          "serviceName": "PDB2",
+          "username": "PDB_ADMIN",
+          "password": "YourStrongPassword",
+          "table": "OE_ORDER_HEADERS_ALL",
+          "filterColumn": "LAST_UPDATE_DATE",
+          "filterValue": "2026-01-01"
+        }
+      }
+    },
+    {
+      "id": "gg-1",
+      "type": "goldengate",
+      "position": {
+        "x": 420,
+        "y": 200
+      },
+      "data": {
+        "status": "idle",
+        "progress": 0,
+        "connectionStatus": "disconnected",
+        "label": "GoldenGate",
+        "nodeType": "goldengate",
+        "subtitle": "CDC Trail \u2192 Databricks",
+        "config": {
+          "installPath": "C:\\app\\golden_gate\\oracle_golden_gate",
+          "extractName": "E_ORA21C",
+          "trailFileLocation": "C:\\app\\golden_gate\\oracle_golden_gate\\dirdat\\aa",
+          "replicatName": "R_DBX",
+          "databricksConnector": "JDBC"
+        }
+      }
+    },
+    {
+      "id": "databricks-1",
+      "type": "databricks",
+      "position": {
+        "x": 760,
+        "y": 200
+      },
+      "data": {
+        "status": "idle",
+        "progress": 0,
+        "connectionStatus": "disconnected",
+        "label": "Databricks",
+        "nodeType": "databricks",
+        "subtitle": "unity_catalog.silver",
+        "config": {
+          "workspaceUrl": "https://adb-123456789.azuredatabricks.net",
+          "accessToken": "dapi\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+          "catalog": "unity_catalog",
+          "schema": "silver",
+          "tableName": "orders",
+          "writeMode": "merge",
+          "zOrderBy": "order_date"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "oracle-1",
+      "target": "gg-1",
+      "animated": false
+    },
+    {
+      "id": "e2-3",
+      "source": "gg-1",
+      "target": "databricks-1",
+      "animated": false
+    }
+  ],
+  "updatedAtMs": 1773637978537
+}

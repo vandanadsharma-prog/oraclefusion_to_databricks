@@ -76,7 +76,7 @@ const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   'oracle-fusion': {
     label: 'Oracle Fusion', nodeType: 'oracle-fusion', subtitle: 'ERP Source Database',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { host: 'localhost', port: '1521', serviceName: 'ORCLPDB1', username: 'FUSION_USER', password: '', table: 'GL_JE_HEADERS', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01' },
+    config: { host: 'localhost', port: '1521', serviceName: 'PDB2', username: 'PDB_ADMIN', password: '', table: 'GL_BALANCE_FACT', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01' },
   },
   bicc: {
     label: 'BICC', nodeType: 'bicc', subtitle: 'Full Export via REST',
@@ -96,7 +96,7 @@ const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   jdbc: {
     label: 'JDBC', nodeType: 'jdbc', subtitle: 'Direct Spark JDBC Read',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/ORCLPDB1', username: 'FUSION_USER', password: '', query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'", fetchSize: 1000 },
+    config: { jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/PDB2', username: 'PDB_ADMIN', password: '', query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'", fetchSize: 1000 },
   },
   'cloud-storage': {
     label: 'Cloud Storage', nodeType: 'cloud-storage', subtitle: 'ADLS Gen2 / S3',
