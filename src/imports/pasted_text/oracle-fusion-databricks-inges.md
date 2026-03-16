@@ -112,7 +112,7 @@ The tool must provide a unified UI to configure any of these pipelines, visualiz
 3. Drags “BICC” node and connects to source.
 4. Drags “Cloud Storage” node and connects to BICC.
 5. Drags “Databricks” node and connects to storage.
-6. Clicks each node to fill in details (e.g., source table = `INVOICES`, BICC output folder = `./data/bicc/`, storage path = `./data/adls/`, target table = `bronze.invoices`).
+6. Clicks each node to fill in details (e.g., source table = `GL_BALANCE_FACT`, BICC output folder = `./data/bicc/`, storage path = `./data/adls/`, target table = `bronze.invoices`).
 7. Clicks “Run”. Backend starts: generates CSV files, then runs AutoLoader (Spark job) to read from storage and write to Delta.
 8. UI shows live logs: “BICC export complete: 1000 rows”, “AutoLoader started”, “Loaded 1000 rows to delta table”.
 9. Final status: “Success”.

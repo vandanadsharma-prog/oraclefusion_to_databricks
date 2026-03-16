@@ -153,7 +153,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             host: 'localhost', port: '9000', serviceName: 'PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
-            table: 'INVOICES', filterColumn: 'lastUpdateDate', filterValue: '2026-01-01',
+            table: 'GL_BALANCE_FACT', filterColumn: 'lastUpdateDate', filterValue: '2026-01-01',
           },
         },
       },

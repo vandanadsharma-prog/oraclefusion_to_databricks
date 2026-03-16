@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Save, Settings2, List, Play, FileJson } from 'lucide-react';
+import { X, Eye, EyeOff, Save } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
 import type { NodeConfig, NodeType } from '../../types/pipeline';
 import { NODE_META } from '../../types/pipeline';
@@ -252,60 +252,20 @@ const CONFIG_COMPONENTS: Partial<Record<NodeType, React.ComponentType<{ config: 
 };
 
 export function ConfigPanel() {
-  // @ts-ignore - Assuming setNodes/setEdges/currentPipelineName exist or will be added to store for this feature
-  const { nodes, edges, selectedNodeId, showConfigPanel, updateNodeConfig, setShowConfigPanel, setNodes, setEdges } = usePipelineStore();
+  const { nodes, selectedNodeId, showConfigPanel, updateNodeConfig, setShowConfigPanel } = usePipelineStore();
   const [localConfig, setLocalConfig] = useState<NodeConfig>({});
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pipelines' | 'config'>('config');
-  const [pipelines, setPipelines] = useState<string[]>([]);
-  const [pipelineName, setPipelineName] = useState('');
 
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   useEffect(() => {
     if (node) {
       setLocalConfig({ ...node.data.config });
-      setActiveTab('config');
     }
     setSaved(false);
   }, [selectedNodeId, node]);
 
-  useEffect(() => {
-    if (activeTab === 'pipelines') {
-      // Fetch pipelines from backend
-      fetch('http://localhost:9000/pipelines')
-        .then(res => res.json())
-        .then(data => setPipelines(data.pipelines || []))
-        .catch(err => console.error("Failed to fetch pipelines", err));
-    }
-  }, [activeTab]);
-
-  if (!showConfigPanel) return null;
-
-  // Logic to load a pipeline from the list
-  const loadPipeline = async (name: string) => {
-    try {
-      const res = await fetch(`http://localhost:9000/pipelines/${name}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (setNodes && setEdges) {
-            setNodes(data.nodes || []);
-            setEdges(data.edges || []);
-            setPipelineName(name.replace('.json', ''));
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load pipeline", e);
-    }
-  };
-
-  const handleSavePipeline = async () => {
-    if (!pipelineName) return;
-    const payload = { name: pipelineName, nodes, edges };
-    await fetch('http://localhost:9000/pipelines', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json'} });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  if (!showConfigPanel || !node) return null;
 
   // Prepare render helpers for Node Config
   const meta = NODE_META[node.data.nodeType];
@@ -325,14 +285,6 @@ export function ConfigPanel() {
     }
   };
 
-  // Common styling
-  const tabStyle = (isActive: boolean): React.CSSProperties => ({
-    flex: 1, padding: '8px', cursor: 'pointer', textAlign: 'center', fontSize: '12px', fontWeight: 600,
-    borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
-    color: isActive ? '#2563eb' : '#64748b', backgroundColor: isActive ? '#f8fafc' : 'transparent',
-    ...fontStyle
-  });
-
   return (
     <div
       style={{
@@ -342,62 +294,7 @@ export function ConfigPanel() {
         boxShadow: '-2px 0 5px rgba(0,0,0,0.02)'
       }}
     >
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
-        <div style={tabStyle(activeTab === 'pipelines')} onClick={() => setActiveTab('pipelines')}>
-            <List size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />Pipelines
-        </div>
-        <div style={tabStyle(activeTab === 'config')} onClick={() => setActiveTab('config')}>
-            <Settings2 size={14} style={{ marginRight: '6px', verticalAlign: 'text-bottom' }} />Configuration
-        </div>
-        <button
-          onClick={() => setShowConfigPanel(false)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0 12px', borderBottom: '2px solid transparent' }}
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {activeTab === 'pipelines' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflowY: 'auto' }}>
-            <Section title="Available Pipelines" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pipelines.map(p => (
-                    <div key={p} onClick={() => loadPipeline(p)} style={{
-                        padding: '8px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#334155'
-                    }}>
-                        <FileJson size={14} color="#2563eb" />
-                        {p}
-                    </div>
-                ))}
-                {pipelines.length === 0 && <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>No pipelines found.</div>}
-            </div>
-
-            <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
-                <Section title="Save Current Pipeline" />
-                <Field label="Pipeline Name" value={pipelineName} onChange={setPipelineName} placeholder="my_pipeline" />
-                <button
-                    onClick={handleSavePipeline}
-                    style={{
-                        width: '100%', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        gap: '7px', padding: '8px', borderRadius: '5px', fontSize: '13px', fontWeight: '600',
-                        border: `1.5px solid ${saved ? '#86efac' : '#bfdbfe'}`,
-                        backgroundColor: saved ? '#f0fdf4' : '#eff6ff',
-                        color: saved ? '#15803d' : '#2563eb',
-                        cursor: 'pointer', transition: 'all 0.15s', ...fontStyle
-                    }}
-                >
-                    <Save size={13} />
-                    {saved ? 'Pipeline Saved' : 'Save Pipeline'}
-                </button>
-            </div>
-        </div>
-      )}
-
-      {activeTab === 'config' && node && (
-      <>
-        {/* Header (Node) */}
+      {/* Header (Node) */}
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
@@ -417,6 +314,12 @@ export function ConfigPanel() {
           <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600' }}>{meta.label}</div>
           <div style={{ fontSize: '10px', color: meta.textColor }}>{meta.subtitle}</div>
         </div>
+        <button
+          onClick={() => setShowConfigPanel(false)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}
+        >
+          <X size={15} />
+        </button>
       </div>
 
       {/* Node ID */}
@@ -451,14 +354,6 @@ export function ConfigPanel() {
           {saved ? 'Configuration Saved' : 'Save Configuration'}
         </button>
       </div>
-      </>
-      )}
-
-      {activeTab === 'config' && !node && (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
-            Select a node on the canvas to configure it.
-        </div>
-      )}
     </div>
   );
 }
