@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, FolderGit2, Plug, Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
+import { LayoutGrid, FolderGit2, Share2, Play, Square, Activity, Terminal, ChevronRight } from 'lucide-react';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { OracleLogo, DatabricksLogo } from './BrandLogos';
 import InfoBeansLogo from '../../../../images/Infobeans_Logo.png';
@@ -57,7 +57,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '32px' }}>
         {[
           { id: 'pipelines' as const, label: 'Pipelines', Icon: FolderGit2 },
-          { id: 'connections' as const, label: 'Connections', Icon: Plug },
+          { id: 'connections' as const, label: 'Connections', Icon: Share2 },
           { id: 'designer' as const, label: 'Designer', Icon: LayoutGrid },
         ].map(({ id, label, Icon }) => {
           const active = tab === id;

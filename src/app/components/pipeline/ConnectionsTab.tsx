@@ -148,9 +148,9 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
               gap: 8,
               padding: '10px 12px',
               borderRadius: 8,
-              border: '1.5px dashed #a5b4fc',
-              background: '#eef2ff',
-              color: '#4338ca',
+              border: '1.5px dashed #fdba74',
+              background: '#fff7ed',
+              color: '#c2410c',
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -323,13 +323,13 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                   gap: 8,
                   padding: '10px 16px',
                   borderRadius: 10,
-                  border: '1.5px solid #86efac',
-                  background: '#dcfce7',
-                  color: '#166534',
+                  border: '1.5px solid #fdba74',
+                  background: '#fff7ed',
+                  color: '#c2410c',
                   fontWeight: 800,
                   cursor: saving || readOnly ? 'not-allowed' : 'pointer',
                   opacity: readOnly ? 0.6 : 1,
-                  boxShadow: '0 10px 24px rgba(22,101,52,0.12)',
+                  boxShadow: '0 10px 24px rgba(234,88,12,0.16)',
                 }}
               >
                 <Save size={14} /> {saving ? 'Saving...' : 'Save Connection'}
