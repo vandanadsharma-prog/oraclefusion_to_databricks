@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, Save, Shield, Database, Globe, PlugZap, Cloud, Server } from 'lucide-react';
+import { Plus, RefreshCw, Save, Shield, Database, Globe, PlugZap, Cloud, Server, Pencil } from 'lucide-react';
 import { useConnectionsStore } from '../../store/connectionsStore';
 import type { ConnectionInfo, ConnectionType, NodeConfig, ConnectionField } from '../../types/pipeline';
 
@@ -32,6 +32,7 @@ function labeledInput(
   onChange: (v: string) => void,
   props?: React.InputHTMLAttributes<HTMLInputElement>
 ) {
+  const isDisabled = Boolean(props?.disabled);
   return (
     <div>
       <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', ...font }}>
@@ -41,7 +42,12 @@ function labeledInput(
         {...props}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        style={FIELD_STYLE}
+        style={{
+          ...FIELD_STYLE,
+          background: isDisabled ? '#f1f5f9' : '#ffffff',
+          color: isDisabled ? '#94a3b8' : '#0f172a',
+          cursor: isDisabled ? 'not-allowed' : 'text',
+        }}
       />
     </div>
   );
@@ -59,6 +65,7 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
   const { items, selectedId, loading, error, schema, loadConnections, loadSchema, select, saveConnection } = useConnectionsStore();
   const [draft, setDraft] = useState<ConnectionInfo | null>(null);
   const [saving, setSaving] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
     loadConnections().catch(() => undefined);
@@ -74,13 +81,17 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
         config: {},
       });
       select(null);
+      setReadOnly(false);
     }
   }, [autoNew, select]);
 
   useEffect(() => {
     if (!selectedId) return;
     const found = items.find((c) => c.id === selectedId);
-    if (found) setDraft(found);
+    if (found) {
+      setDraft(found);
+      setReadOnly(true);
+    }
   }, [selectedId, items]);
 
   const filtered = useMemo(() => items.slice().sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0)), [items]);
@@ -128,6 +139,7 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
             onClick={() => {
               select(null);
               setDraft({ id: '', name: 'New Connection', type: 'jdbc', config: {} });
+              setReadOnly(false);
             }}
             style={{
               width: '100%',
@@ -186,14 +198,40 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
           <div style={{ maxWidth: 780, margin: '0 auto', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 18, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>Connection Details</div>
+              {readOnly && (
+                <div style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: 999 }}>
+                  Read only
+                </div>
+              )}
               {draft.updatedAtMs && (
                 <div style={{ fontSize: 11, color: '#94a3b8' }}>
                   Updated {new Date(draft.updatedAtMs).toLocaleString()}
                 </div>
               )}
+              {draft.id && (
+                <button
+                  onClick={() => setReadOnly(false)}
+                  disabled={!readOnly}
+                  style={{
+                    marginLeft: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    border: '1.5px solid #cbd5f5',
+                    background: readOnly ? '#eef2ff' : '#f8fafc',
+                    color: '#4338ca',
+                    fontWeight: 700,
+                    cursor: readOnly ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <Pencil size={14} /> Edit
+                </button>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {labeledInput('Connection Name', draft.name, (v) => setDraft((d) => (d ? { ...d, name: v } : d)))}
+              {labeledInput('Connection Name', draft.name, (v) => setDraft((d) => (d ? { ...d, name: v } : d)), { disabled: readOnly })}
               <div>
                 <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', ...font }}>
                   Type
@@ -201,7 +239,13 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                 <select
                   value={draft.type}
                   onChange={(e) => setDraft((d) => (d ? { ...d, type: e.target.value as ConnectionType } : d))}
-                  style={{ ...FIELD_STYLE, cursor: 'pointer' }}
+                  disabled={readOnly}
+                  style={{
+                    ...FIELD_STYLE,
+                    cursor: readOnly ? 'not-allowed' : 'pointer',
+                    background: readOnly ? '#f1f5f9' : '#ffffff',
+                    color: readOnly ? '#94a3b8' : '#0f172a',
+                  }}
                 >
                   <option value="jdbc">JDBC</option>
                   <option value="oracle-fusion">Oracle Fusion</option>
@@ -216,7 +260,7 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
 
             {draft.type === 'rest-api' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {labeledInput('API Base URL', (draft.config as any)?.baseUrl, (v) => updateConfig({ baseUrl: v }))}
+                {labeledInput('API Base URL', (draft.config as any)?.baseUrl, (v) => updateConfig({ baseUrl: v }), { disabled: readOnly })}
                 <div>
                   <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', ...font }}>
                     Authentication Type
@@ -224,19 +268,25 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                   <select
                     value={(draft.config as any)?.authType ?? 'token'}
                     onChange={(e) => updateConfig({ authType: e.target.value as any })}
-                    style={{ ...FIELD_STYLE, cursor: 'pointer' }}
+                    disabled={readOnly}
+                    style={{
+                      ...FIELD_STYLE,
+                      cursor: readOnly ? 'not-allowed' : 'pointer',
+                      background: readOnly ? '#f1f5f9' : '#ffffff',
+                      color: readOnly ? '#94a3b8' : '#0f172a',
+                    }}
                   >
                     <option value="token">Token</option>
                     <option value="basic">Username & Password</option>
                   </select>
                 </div>
                 {(draft.config as any)?.authType !== 'basic' && (
-                  labeledInput('Token Value', (draft.config as any)?.tokenValue, (v) => updateConfig({ tokenValue: v }), { type: 'password' })
+                  labeledInput('Token Value', (draft.config as any)?.tokenValue, (v) => updateConfig({ tokenValue: v }), { type: 'password', disabled: readOnly })
                 )}
                 {(draft.config as any)?.authType === 'basic' && (
                   <>
-                    {labeledInput('Username', (draft.config as any)?.username, (v) => updateConfig({ username: v }))}
-                    {labeledInput('Password', (draft.config as any)?.password, (v) => updateConfig({ password: v }), { type: 'password' })}
+                    {labeledInput('Username', (draft.config as any)?.username, (v) => updateConfig({ username: v }), { disabled: readOnly })}
+                    {labeledInput('Password', (draft.config as any)?.password, (v) => updateConfig({ password: v }), { type: 'password', disabled: readOnly })}
                   </>
                 )}
               </div>
@@ -250,6 +300,7 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                       {labeledInput(f.label, value, (v) => updateConfig({ [f.key]: type === 'number' ? Number(v) : v }), {
                         type,
                         placeholder: f.placeholder,
+                        disabled: readOnly,
                       })}
                     </div>
                   );
@@ -264,7 +315,7 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
 
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
               <button
-                disabled={saving}
+                disabled={saving || readOnly}
                 onClick={save}
                 style={{
                   display: 'flex',
@@ -276,11 +327,12 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                   background: '#dcfce7',
                   color: '#166534',
                   fontWeight: 800,
-                  cursor: saving ? 'not-allowed' : 'pointer',
+                  cursor: saving || readOnly ? 'not-allowed' : 'pointer',
+                  opacity: readOnly ? 0.6 : 1,
                   boxShadow: '0 10px 24px rgba(22,101,52,0.12)',
                 }}
               >
-                <Save size={14} /> {saving ? 'Saving…' : 'Save Connection'}
+                <Save size={14} /> {saving ? 'Saving...' : 'Save Connection'}
               </button>
             </div>
           </div>

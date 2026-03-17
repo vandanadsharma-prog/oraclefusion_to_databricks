@@ -48,7 +48,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
             Oracle Fusion To Databricks 
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.2' }}>
-            Oracle Fusion to Databricks Unity Catalog Pipeline Builder
+            Data Ingestion Pipelines
           </div>
         </div>
       </div>

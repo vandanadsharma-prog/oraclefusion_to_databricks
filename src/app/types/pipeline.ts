@@ -15,6 +15,7 @@ export type LogLevel = 'info' | 'success' | 'error' | 'warn' | 'debug';
 export type ConnectionType = 'jdbc' | 'oracle-fusion' | 'bicc' | 'cloud-storage' | 'databricks' | 'rest-api' | 'goldengate';
 
 export interface NodeConfig {
+  connectionId?: string;
   // Oracle Fusion
   host?: string;
   port?: string;

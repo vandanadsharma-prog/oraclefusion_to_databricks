@@ -25,14 +25,16 @@ const inputBase: React.CSSProperties = {
 
 function ConnectionPicker({
   type,
+  config,
   onApply,
 }: {
   type: ConnectionType;
+  config: NodeConfig;
   onApply: (cfg: NodeConfig) => void;
 }) {
   const { items, loadConnections } = useConnectionsStore();
   const matches = items.filter((c) => c.type === type);
-  const [selectedId, setSelectedId] = useState('');
+  const selectedId = config.connectionId ?? '';
   const CONNECTION_KEYS: Record<ConnectionType, Array<keyof NodeConfig>> = {
     'oracle-fusion': ['host', 'port', 'serviceName', 'username', 'password'],
     'cloud-storage': ['accountName', 'accessKey'],
@@ -56,22 +58,21 @@ function ConnectionPicker({
         value={selectedId}
         onChange={(e) => {
           const val = e.target.value;
-          setSelectedId(val);
           if (val === '__new__') {
             window.dispatchEvent(new CustomEvent('open-connections-new'));
             return;
           }
           const conn = matches.find((c) => c.id === val);
+          const next: NodeConfig = { connectionId: val || undefined };
           if (conn) {
             const keys = CONNECTION_KEYS[type] ?? [];
-            const next: NodeConfig = {};
             for (const k of keys) {
               if (conn.config && (conn.config as any)[k] !== undefined) {
                 (next as any)[k] = (conn.config as any)[k];
               }
             }
-            onApply(next);
           }
+          onApply(next);
         }}
         style={{ ...inputBase, cursor: 'pointer', boxSizing: 'border-box' }}
         onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.backgroundColor = '#ffffff'; }}
@@ -81,7 +82,7 @@ function ConnectionPicker({
         {matches.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
         ))}
-        <option value="__new__">Create new connection…</option>
+        <option value="__new__">Create new connection...</option>
       </select>
     </div>
   );
@@ -175,7 +176,7 @@ function Section({ title }: { title: string }) {
 function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="oracle-fusion" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="oracle-fusion" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Connection Details" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Field label="Host" value={config.host} onChange={(v) => onChange({ host: v })} placeholder="localhost" />
@@ -198,7 +199,7 @@ function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange
 function BiccConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="bicc" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="bicc" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Export Settings" />
       <SelectField label="Export Format" value={config.format} onChange={(v) => onChange({ format: v as 'csv' | 'parquet' })}
         options={[{ value: 'csv', label: 'CSV (Comma-Separated)' }, { value: 'parquet', label: 'Parquet (columnar)' }]} />
@@ -218,7 +219,7 @@ function BiccConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
 function GoldenGateConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="goldengate" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="goldengate" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Configuration" />
       <div style={{ fontSize: '12px', color: '#94a3b8' }}>
         No additional parameters required for GoldenGate in this UI.
@@ -230,7 +231,7 @@ function GoldenGateConfig({ config, onChange }: { config: NodeConfig; onChange: 
 function RestApiConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="rest-api" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="rest-api" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="API Base" />
       <Field label="API Base URL" value={config.baseUrl} onChange={(v) => onChange({ baseUrl: v })} placeholder="https://api.example.com" />
       <Section title="Authentication" />
@@ -258,7 +259,7 @@ function RestApiConfig({ config, onChange }: { config: NodeConfig; onChange: (c:
 function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="jdbc" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="jdbc" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Connection" />
       <Field label="JDBC URL" value={config.jdbcUrl} onChange={(v) => onChange({ jdbcUrl: v })} placeholder="jdbc:oracle:thin:@localhost:1521/PDB2" />
       <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} placeholder="PDB_ADMIN" />
@@ -274,7 +275,7 @@ function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
 function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="cloud-storage" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="cloud-storage" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Storage" />
       <Field label="Container Name" value={config.container} onChange={(v) => onChange({ container: v })} placeholder="oracle-data" />
       <Field label="Path / Prefix" value={config.path} onChange={(v) => onChange({ path: v })} placeholder="/oracle/exports/" />
@@ -286,7 +287,7 @@ function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange
 function DatabricksConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <ConnectionPicker type="databricks" onApply={(cfg) => onChange(cfg)} />
+      <ConnectionPicker type="databricks" config={config} onApply={(cfg) => onChange(cfg)} />
       <Section title="Workspace" />
       <Field label="Workspace URL" value={config.workspaceUrl} onChange={(v) => onChange({ workspaceUrl: v })} placeholder="https://adb-xxx.azuredatabricks.net" />
       <Field label="Personal Access Token" value={config.accessToken} onChange={(v) => onChange({ accessToken: v })} type="password" placeholder="dapi..." />
