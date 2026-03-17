@@ -49,7 +49,8 @@ async def run_bicc(manager: RunManager, state: RunState, req: PipelineRunRequest
     password = str(getattr(src.config, "password", "") or "")
     table = str(getattr(src.config, "table", "") or "")
     filter_column = str(getattr(src.config, "filterColumn", "") or "")
-    filter_value = str(getattr(src.config, "filterValue", "") or "")
+    select_columns = str(getattr(src.config, "selectColumns", "") or "*")
+    limit_rows = getattr(src.config, "limitRows", None)
 
     if "•" in password:
         password = os.getenv("BACKEND_ORACLE_PASSWORD", "")
@@ -93,11 +94,14 @@ async def run_bicc(manager: RunManager, state: RunState, req: PipelineRunRequest
     rows = 0
     try:
         cur = conn.cursor()
-        if filter_column and filter_value:
-            sql = f"SELECT * FROM {table} WHERE {filter_column} >= TO_DATE(:v, 'YYYY-MM-DD')"
-            cur.execute(sql, v=filter_value)
+        columns = select_columns if select_columns else "*"
+        sql = f"SELECT {columns} FROM {table}"
+        if filter_column:
+            sql = f"{sql} ORDER BY {filter_column}"
+        if isinstance(limit_rows, int) and limit_rows > 0:
+            sql = f"SELECT * FROM ({sql}) WHERE ROWNUM <= :limit_rows"
+            cur.execute(sql, limit_rows=limit_rows)
         else:
-            sql = f"SELECT * FROM {table}"
             cur.execute(sql)
 
         cols = [d[0] for d in cur.description or []]

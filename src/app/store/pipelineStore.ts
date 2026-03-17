@@ -97,7 +97,7 @@ const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   'oracle-fusion': {
     label: 'Oracle Fusion', nodeType: 'oracle-fusion', subtitle: 'ERP Source Database',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { host: 'localhost', port: '1521', serviceName: 'PDB2', username: 'PDB_ADMIN', password: '', table: 'GL_BALANCE_FACT', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01' },
+    config: { host: 'localhost', port: '1521', serviceName: 'PDB2', username: 'PDB_ADMIN', password: '', table: 'GL_BALANCE_FACT', selectColumns: '*', filterColumn: 'LAST_UPDATE_DATE', limitRows: 10000 },
   },
   bicc: {
     label: 'BICC', nodeType: 'bicc', subtitle: 'Full Export via REST',
@@ -107,27 +107,27 @@ const DEFAULT_NODE_DATA: Record<NodeType, Partial<PipelineNodeData>> = {
   goldengate: {
     label: 'GoldenGate', nodeType: 'goldengate', subtitle: 'CDC - Trail to Databricks',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { installPath: '/opt/goldengate/21c', extractName: 'E_ORA21C', trailFileLocation: '/gg/dirdat/aa', replicatName: 'R_DBX', databricksConnector: 'JDBC' },
+    config: {},
   },
 		  'rest-api': {
 		    label: 'REST API', nodeType: 'rest-api', subtitle: 'Paginated - fscmRestApi',
 		    connectionStatus: 'disconnected', status: 'idle', progress: 0,
-		    config: { endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices', authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
+		    config: { baseUrl: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05', authType: 'token', tokenValue: '', pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01' },
 		  },
   jdbc: {
     label: 'JDBC', nodeType: 'jdbc', subtitle: 'Direct Spark JDBC Read',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/PDB2', username: 'PDB_ADMIN', password: '', query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'", fetchSize: 1000 },
+    config: { jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/PDB2', username: 'PDB_ADMIN', password: '', query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'", rowLimit: 1000 },
   },
   'cloud-storage': {
     label: 'Cloud Storage', nodeType: 'cloud-storage', subtitle: 'ADLS Gen2 / S3',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { storageType: 'adls', container: 'oracle-data', path: '/oracle/exports/', accountName: '', accessKey: '' },
+    config: { container: 'oracle-data', path: '/oracle/exports/', accountName: '', accessKey: '', fileExtensionFilter: '.csv' },
   },
   databricks: {
     label: 'Databricks', nodeType: 'databricks', subtitle: 'Unity Catalog - Delta',
     connectionStatus: 'disconnected', status: 'idle', progress: 0,
-    config: { workspaceUrl: 'https://adb-123456789.azuredatabricks.net', accessToken: '', catalog: 'unity_catalog', schema: 'bronze', tableName: 'output_table', writeMode: 'append', zOrderBy: '' },
+    config: { workspaceUrl: 'https://adb-123456789.azuredatabricks.net', accessToken: '', catalog: 'unity_catalog', schema: 'bronze', tableName: 'output_table', writeMode: 'append', reorderBy: '' },
   },
 };
 

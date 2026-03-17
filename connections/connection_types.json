@@ -3,9 +3,7 @@
     "fields": [
       { "key": "jdbcUrl", "label": "JDBC URL" },
       { "key": "username", "label": "Username" },
-      { "key": "password", "label": "Password", "kind": "password" },
-      { "key": "schema", "label": "Schema" },
-      { "key": "tableName", "label": "Table Name" }
+      { "key": "password", "label": "Password", "kind": "password" }
     ]
   },
   "oracle-fusion": {
@@ -14,35 +12,34 @@
       { "key": "port", "label": "Port" },
       { "key": "serviceName", "label": "Service Name" },
       { "key": "username", "label": "Username" },
-      { "key": "password", "label": "Password", "kind": "password" },
-      { "key": "table", "label": "Table / View" }
+      { "key": "password", "label": "Password", "kind": "password" }
     ]
   },
   "bicc": {
-    "fields": [
-      { "key": "host", "label": "Host" },
-      { "key": "port", "label": "Port" },
-      { "key": "serviceName", "label": "Service Name" },
-      { "key": "username", "label": "Username" },
-      { "key": "password", "label": "Password", "kind": "password" },
-      { "key": "outputPath", "label": "Output Path" }
-    ]
+    "fields": []
   },
   "cloud-storage": {
     "fields": [
       { "key": "accountName", "label": "Account Name" },
-      { "key": "container", "label": "Container" },
-      { "key": "path", "label": "Base Path / Prefix" },
       { "key": "accessKey", "label": "Access Key / SAS", "kind": "password" }
     ]
   },
   "databricks": {
     "fields": [
       { "key": "workspaceUrl", "label": "Workspace URL" },
-      { "key": "accessToken", "label": "Access Token", "kind": "password" },
-      { "key": "catalog", "label": "Catalog" },
-      { "key": "schema", "label": "Schema" },
-      { "key": "tableName", "label": "Table Name" }
+      { "key": "accessToken", "label": "Personal Access Token", "kind": "password" }
     ]
+  },
+  "rest-api": {
+    "fields": [
+      { "key": "baseUrl", "label": "API Base URL" },
+      { "key": "authType", "label": "Authentication Type" },
+      { "key": "tokenValue", "label": "Token Value", "kind": "password" },
+      { "key": "username", "label": "Username" },
+      { "key": "password", "label": "Password", "kind": "password" }
+    ]
+  },
+  "goldengate": {
+    "fields": []
   }
 }

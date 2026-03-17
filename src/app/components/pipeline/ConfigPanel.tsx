@@ -32,6 +32,16 @@ function ConnectionPicker({
 }) {
   const { items, loadConnections } = useConnectionsStore();
   const matches = items.filter((c) => c.type === type);
+  const [selectedId, setSelectedId] = useState('');
+  const CONNECTION_KEYS: Record<ConnectionType, Array<keyof NodeConfig>> = {
+    'oracle-fusion': ['host', 'port', 'serviceName', 'username', 'password'],
+    'cloud-storage': ['accountName', 'accessKey'],
+    databricks: ['workspaceUrl', 'accessToken'],
+    jdbc: ['jdbcUrl', 'username', 'password'],
+    'rest-api': ['baseUrl', 'authType', 'tokenValue', 'username', 'password'],
+    bicc: [],
+    goldengate: [],
+  };
 
   useEffect(() => {
     if (items.length === 0) {
@@ -43,17 +53,24 @@ function ConnectionPicker({
     <div>
       <FieldLabel>Connection</FieldLabel>
       <select
-        value=""
+        value={selectedId}
         onChange={(e) => {
           const val = e.target.value;
+          setSelectedId(val);
           if (val === '__new__') {
             window.dispatchEvent(new CustomEvent('open-connections-new'));
             return;
           }
           const conn = matches.find((c) => c.id === val);
           if (conn) {
-            const { table, tableName, path, container, ...rest } = conn.config as any;
-            onApply(rest);
+            const keys = CONNECTION_KEYS[type] ?? [];
+            const next: NodeConfig = {};
+            for (const k of keys) {
+              if (conn.config && (conn.config as any)[k] !== undefined) {
+                (next as any)[k] = (conn.config as any)[k];
+              }
+            }
+            onApply(next);
           }
         }}
         style={{ ...inputBase, cursor: 'pointer', boxSizing: 'border-box' }}
@@ -169,9 +186,10 @@ function OracleFusionConfig({ config, onChange }: { config: NodeConfig; onChange
       <Field label="Password" value={config.password} onChange={(v) => onChange({ password: v })} type="password" />
       <Section title="Source Table" />
       <Field label="Table / View" value={config.table} onChange={(v) => onChange({ table: v })} placeholder="GL_BALANCE_FACT" />
+      <Field label="Select Columns" value={config.selectColumns} onChange={(v) => onChange({ selectColumns: v })} placeholder="* or col1,col2" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Field label="Filter Column" value={config.filterColumn} onChange={(v) => onChange({ filterColumn: v })} placeholder="LAST_UPDATE_DATE" />
-        <Field label="Filter Value" value={config.filterValue} onChange={(v) => onChange({ filterValue: v })} placeholder="2026-01-01" />
+        <Field label="Limit Rows" value={config.limitRows} onChange={(v) => onChange({ limitRows: Number(v) })} placeholder="10000" type="number" />
       </div>
     </div>
   );
@@ -200,15 +218,11 @@ function BiccConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
 function GoldenGateConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <Section title="GoldenGate Installation" />
-      <Field label="Install Path" value={config.installPath} onChange={(v) => onChange({ installPath: v })} placeholder="C:\\app\\golden_gate\\oracle_golden_gate" />
-      <Section title="Extract Configuration" />
-      <Field label="Extract Name" value={config.extractName} onChange={(v) => onChange({ extractName: v })} placeholder="E_ORA21C" />
-      <Field label="Trail File Location" value={config.trailFileLocation} onChange={(v) => onChange({ trailFileLocation: v })} placeholder="C:\\app\\golden_gate\\oracle_golden_gate\\dirdat\\aa" />
-      <Section title="Replicat Target" />
-      <Field label="Replicat Name" value={config.replicatName} onChange={(v) => onChange({ replicatName: v })} placeholder="R_DBX" />
-      <SelectField label="Databricks Connector" value={config.databricksConnector} onChange={(v) => onChange({ databricksConnector: v })}
-        options={[{ value: 'JDBC', label: 'JDBC / Spark Connector' }, { value: 'REST', label: 'Databricks REST API' }, { value: 'DELTA', label: 'Delta Lake (direct)' }]} />
+      <ConnectionPicker type="goldengate" onApply={(cfg) => onChange(cfg)} />
+      <Section title="Configuration" />
+      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+        No additional parameters required for GoldenGate in this UI.
+      </div>
     </div>
   );
 }
@@ -216,15 +230,19 @@ function GoldenGateConfig({ config, onChange }: { config: NodeConfig; onChange: 
 function RestApiConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Partial<NodeConfig>) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <Section title="Endpoint" />
-      <Field label="API Base URL" value={config.endpoint} onChange={(v) => onChange({ endpoint: v })} placeholder="http://localhost:9000/fscmRestApi/..." />
+      <ConnectionPicker type="rest-api" onApply={(cfg) => onChange(cfg)} />
+      <Section title="API Base" />
+      <Field label="API Base URL" value={config.baseUrl} onChange={(v) => onChange({ baseUrl: v })} placeholder="https://api.example.com" />
       <Section title="Authentication" />
-      <SelectField label="Auth Type" value={config.authType} onChange={(v) => onChange({ authType: v as 'oauth2' | 'basic' | 'bearer' })}
-        options={[{ value: 'oauth2', label: 'OAuth2 (Client Credentials)' }, { value: 'bearer', label: 'Bearer Token' }, { value: 'basic', label: 'Basic Auth' }]} />
-      {(config.authType === 'oauth2' || config.authType === 'basic') && (
+      <SelectField label="Auth Type" value={config.authType} onChange={(v) => onChange({ authType: v as 'token' | 'basic' })}
+        options={[{ value: 'token', label: 'Token' }, { value: 'basic', label: 'Username & Password' }]} />
+      {config.authType === 'token' && (
+        <Field label="Token Value" value={config.tokenValue} onChange={(v) => onChange({ tokenValue: v })} type="password" />
+      )}
+      {config.authType === 'basic' && (
         <>
-          <Field label="Client ID / Username" value={config.clientId} onChange={(v) => onChange({ clientId: v })} />
-          <Field label="Client Secret / Password" value={config.clientSecret} onChange={(v) => onChange({ clientSecret: v })} type="password" />
+          <Field label="Username" value={config.username} onChange={(v) => onChange({ username: v })} />
+          <Field label="Password" value={config.password} onChange={(v) => onChange({ password: v })} type="password" />
         </>
       )}
       <Section title="Pagination and Filters" />
@@ -248,8 +266,7 @@ function JdbcConfig({ config, onChange }: { config: NodeConfig; onChange: (c: Pa
       <Section title="Query" />
       <TextareaField label="SQL Query" value={config.query} onChange={(v) => onChange({ query: v })}
         placeholder="SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'" rows={4} />
-      <Field label="Pushdown Filter" value={config.pushdownFilter} onChange={(v) => onChange({ pushdownFilter: v })} placeholder="LAST_UPDATE_DATE > '2026-01-01'" />
-      <Field label="Fetch Size (rows)" value={config.fetchSize} onChange={(v) => onChange({ fetchSize: Number(v) })} type="number" placeholder="1000" />
+      <Field label="Row Limit" value={config.rowLimit} onChange={(v) => onChange({ rowLimit: Number(v) })} type="number" placeholder="1000" />
     </div>
   );
 }
@@ -259,13 +276,9 @@ function CloudStorageConfig({ config, onChange }: { config: NodeConfig; onChange
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <ConnectionPicker type="cloud-storage" onApply={(cfg) => onChange(cfg)} />
       <Section title="Storage" />
-      <SelectField label="Storage Type" value={config.storageType} onChange={(v) => onChange({ storageType: v as 'adls' | 's3' | 'gcs' | 'local' })}
-        options={[{ value: 'adls', label: 'Azure Data Lake Storage Gen2' }, { value: 's3', label: 'Amazon S3' }, { value: 'gcs', label: 'Google Cloud Storage' }, { value: 'local', label: 'Local Filesystem (dev)' }]} />
-      <Field label="Container / Bucket" value={config.container} onChange={(v) => onChange({ container: v })} placeholder="oracle-data" />
-      <Field label="Path / Prefix" value={config.path} onChange={(v) => onChange({ path: v })} placeholder="C:\\oracle\\exports\\" />
-      <Section title="Credentials" />
-      <Field label="Account Name" value={config.accountName} onChange={(v) => onChange({ accountName: v })} placeholder="myadlsaccount" />
-      <Field label="Access Key / SAS Token" value={config.accessKey} onChange={(v) => onChange({ accessKey: v })} type="password" />
+      <Field label="Container Name" value={config.container} onChange={(v) => onChange({ container: v })} placeholder="oracle-data" />
+      <Field label="Path / Prefix" value={config.path} onChange={(v) => onChange({ path: v })} placeholder="/oracle/exports/" />
+      <Field label="File Extension Filter" value={config.fileExtensionFilter} onChange={(v) => onChange({ fileExtensionFilter: v })} placeholder=".csv" />
     </div>
   );
 }
@@ -288,7 +301,7 @@ function DatabricksConfig({ config, onChange }: { config: NodeConfig; onChange: 
         options={[{ value: 'append', label: 'Append (incremental)' }, { value: 'overwrite', label: 'Overwrite (full reload)' }, { value: 'merge', label: 'Merge / Upsert (CDC)' }]} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Field label="Partition By" value={config.partitionBy} onChange={(v) => onChange({ partitionBy: v })} placeholder="date_col" />
-        <Field label="Z-ORDER By" value={config.zOrderBy} onChange={(v) => onChange({ zOrderBy: v })} placeholder="id_col" />
+        <Field label="Re-Order By" value={config.reorderBy} onChange={(v) => onChange({ reorderBy: v })} placeholder="id_col" />
       </div>
     </div>
   );

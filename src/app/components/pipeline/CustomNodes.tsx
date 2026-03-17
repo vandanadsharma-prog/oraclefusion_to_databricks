@@ -248,7 +248,7 @@ function PipelineNode({
           {data.nodeType === 'jdbc' &&
             (data.config.jdbcUrl?.replace('jdbc:oracle:thin:@', '') || 'JDBC URL not set')}
           {data.nodeType === 'cloud-storage' &&
-            `${data.config.storageType?.toUpperCase()} — ${data.config.container || 'container'}`}
+            `${data.config.container || 'container'} — ${data.config.path || 'path'}`}
           {data.nodeType === 'databricks' &&
             `${data.config.catalog}.${data.config.schema}.${data.config.tableName}`}
         </div>

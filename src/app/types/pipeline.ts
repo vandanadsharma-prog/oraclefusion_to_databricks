@@ -12,7 +12,7 @@ export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'er
 export type ExecutionStatus = 'idle' | 'running' | 'success' | 'error';
 export type PipelineType = 'bicc' | 'goldengate' | 'rest-api' | 'jdbc' | 'custom';
 export type LogLevel = 'info' | 'success' | 'error' | 'warn' | 'debug';
-export type ConnectionType = 'jdbc' | 'oracle-fusion' | 'bicc' | 'cloud-storage' | 'databricks';
+export type ConnectionType = 'jdbc' | 'oracle-fusion' | 'bicc' | 'cloud-storage' | 'databricks' | 'rest-api' | 'goldengate';
 
 export interface NodeConfig {
   // Oracle Fusion
@@ -23,37 +23,20 @@ export interface NodeConfig {
   password?: string;
   table?: string;
   filterColumn?: string;
-  filterValue?: string;
+  selectColumns?: string;
+  limitRows?: number;
   // BICC
   format?: 'csv' | 'parquet';
   outputPath?: string;
   schedule?: 'immediate' | 'cron';
   cronExpression?: string;
   exportType?: 'full' | 'incremental';
-  // GoldenGate
-  installPath?: string;
-  extractName?: string;
-  trailFileLocation?: string;
-  replicatName?: string;
-  databricksConnector?: string;
-  // REST API
-  endpoint?: string;
-  authType?: 'oauth2' | 'basic' | 'bearer';
-  clientId?: string;
-  clientSecret?: string;
-  pageSize?: number;
-  filterParam?: string;
-  // JDBC
-  jdbcUrl?: string;
-  query?: string;
-  pushdownFilter?: string;
-  fetchSize?: number;
   // Cloud Storage
-  storageType?: 'adls' | 's3' | 'gcs' | 'local';
   container?: string;
   path?: string;
   accountName?: string;
   accessKey?: string;
+  fileExtensionFilter?: string;
   // Databricks
   workspaceUrl?: string;
   accessToken?: string;
@@ -62,7 +45,18 @@ export interface NodeConfig {
   tableName?: string;
   writeMode?: 'append' | 'overwrite' | 'merge';
   partitionBy?: string;
-  zOrderBy?: string;
+  reorderBy?: string;
+  // REST API
+  baseUrl?: string;
+  authType?: 'token' | 'basic';
+  tokenValue?: string;
+  pageSize?: number;
+  filterParam?: string;
+  filterValue?: string;
+  // JDBC
+  jdbcUrl?: string;
+  query?: string;
+  rowLimit?: number;
 }
 
 export interface PipelineNodeData extends Record<string, unknown> {

@@ -22,7 +22,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             host: 'localhost', port: '1521', serviceName: 'PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
-            table: 'GL_BALANCE_FACT', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01',
+            table: 'GL_BALANCE_FACT', selectColumns: '*', filterColumn: 'LAST_UPDATE_DATE', limitRows: 10000,
           },
         },
       },
@@ -50,8 +50,8 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           nodeType: 'cloud-storage',
           subtitle: 'ADLS Gen2',
           config: {
-            storageType: 'adls', container: 'oracle-data',
-            path: '/oracle/exports/', accountName: 'myadlsaccount', accessKey: 'YourStrongPassword',
+            container: 'oracle-data',
+            path: '/oracle/exports/', accountName: 'myadlsaccount', accessKey: 'YourStrongPassword', fileExtensionFilter: '.csv',
           },
         },
       },
@@ -67,7 +67,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             workspaceUrl: 'https://adb-123456789.azuredatabricks.net',
             accessToken: 'dapi••••••••', catalog: 'unity_catalog', schema: 'bronze',
-            tableName: 'gl_je_headers', writeMode: 'append', zOrderBy: 'journal_date',
+            tableName: 'gl_je_headers', writeMode: 'append', reorderBy: 'journal_date',
           },
         },
       },
@@ -95,7 +95,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             host: 'localhost', port: '1521', serviceName: 'PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
-            table: 'OE_ORDER_HEADERS_ALL', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01',
+            table: 'OE_ORDER_HEADERS_ALL', selectColumns: '*', filterColumn: 'LAST_UPDATE_DATE', limitRows: 10000,
           },
         },
       },
@@ -108,10 +108,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           label: 'GoldenGate',
           nodeType: 'goldengate',
           subtitle: 'CDC Trail → Databricks',
-          config: {
-            installPath: '/opt/goldengate/21c', extractName: 'E_ORA21C',
-            trailFileLocation: '/gg/dirdat/aa', replicatName: 'R_DBX', databricksConnector: 'JDBC',
-          },
+          config: {},
         },
       },
       {
@@ -126,7 +123,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             workspaceUrl: 'https://adb-123456789.azuredatabricks.net',
             accessToken: 'dapi••••••••', catalog: 'unity_catalog', schema: 'silver',
-            tableName: 'orders', writeMode: 'merge', zOrderBy: 'order_date',
+            tableName: 'orders', writeMode: 'merge', reorderBy: 'order_date',
           },
         },
       },
@@ -153,7 +150,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             host: 'localhost', port: '9000', serviceName: 'PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
-            table: 'GL_BALANCE_FACT', filterColumn: 'lastUpdateDate', filterValue: '2026-01-01',
+            table: 'GL_BALANCE_FACT', selectColumns: '*', filterColumn: 'lastUpdateDate', limitRows: 10000,
           },
         },
       },
@@ -167,8 +164,8 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           nodeType: 'rest-api',
           subtitle: 'Paginated – OAuth2',
           config: {
-            endpoint: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05/invoices',
-            authType: 'oauth2', clientId: 'fusion_client_id', clientSecret: 'YourStrongPassword',
+            baseUrl: 'http://localhost:9000/fscmRestApi/resources/11.13.18.05',
+            authType: 'token', tokenValue: 'YourStrongPassword',
             pageSize: 200, filterParam: 'lastUpdateDate', filterValue: '2026-01-01',
           },
         },
@@ -212,7 +209,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             host: 'localhost', port: '1521', serviceName: 'PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
-            table: 'AP_INVOICES_ALL', filterColumn: 'LAST_UPDATE_DATE', filterValue: '2026-01-01',
+            table: 'AP_INVOICES_ALL', selectColumns: '*', filterColumn: 'LAST_UPDATE_DATE', limitRows: 10000,
           },
         },
       },
@@ -229,8 +226,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
             jdbcUrl: 'jdbc:oracle:thin:@localhost:1521/PDB2',
             username: 'PDB_ADMIN', password: 'YourStrongPassword',
             query: "SELECT * FROM AP_INVOICES_ALL WHERE LAST_UPDATE_DATE > '2026-01-01'",
-            pushdownFilter: "LAST_UPDATE_DATE > '2026-01-01'",
-            fetchSize: 1000,
+            rowLimit: 1000,
           },
         },
       },
@@ -246,7 +242,7 @@ export const TEMPLATES: Record<PipelineType, { nodes: PipelineNode[]; edges: Edg
           config: {
             workspaceUrl: 'https://adb-123456789.azuredatabricks.net',
             accessToken: 'dapi••••••••', catalog: 'unity_catalog', schema: 'bronze',
-            tableName: 'ap_invoices_jdbc', writeMode: 'append', zOrderBy: 'invoice_date',
+            tableName: 'ap_invoices_jdbc', writeMode: 'append', reorderBy: 'invoice_date',
           },
         },
       },

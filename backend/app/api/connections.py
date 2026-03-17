@@ -47,8 +47,8 @@ def _connections_dir() -> Path:
     return (project_root / base).resolve()
 
 
-def _connections_file() -> Path:
-    return _connections_dir() / "connection.json"
+def _connections_file(name: str) -> Path:
+    return _connections_dir() / name
 
 
 def _schema_file() -> Path:
@@ -61,8 +61,6 @@ SCHEMA_FALLBACK: dict[str, Any] = {
             {"key": "jdbcUrl", "label": "JDBC URL"},
             {"key": "username", "label": "Username"},
             {"key": "password", "label": "Password", "kind": "password"},
-            {"key": "schema", "label": "Schema"},
-            {"key": "tableName", "label": "Table Name"},
         ]
     },
     "oracle-fusion": {
@@ -72,57 +70,98 @@ SCHEMA_FALLBACK: dict[str, Any] = {
             {"key": "serviceName", "label": "Service Name"},
             {"key": "username", "label": "Username"},
             {"key": "password", "label": "Password", "kind": "password"},
-            {"key": "table", "label": "Table / View"},
         ]
     },
-    "bicc": {
-        "fields": [
-            {"key": "host", "label": "Host"},
-            {"key": "port", "label": "Port"},
-            {"key": "serviceName", "label": "Service Name"},
-            {"key": "username", "label": "Username"},
-            {"key": "password", "label": "Password", "kind": "password"},
-            {"key": "outputPath", "label": "Output Path"},
-        ]
-    },
+    "bicc": {"fields": []},
     "cloud-storage": {
         "fields": [
             {"key": "accountName", "label": "Account Name"},
-            {"key": "container", "label": "Container"},
-            {"key": "path", "label": "Base Path"},
             {"key": "accessKey", "label": "Access Key / SAS", "kind": "password"},
         ]
     },
     "databricks": {
         "fields": [
             {"key": "workspaceUrl", "label": "Workspace URL"},
-            {"key": "accessToken", "label": "Access Token", "kind": "password"},
-            {"key": "catalog", "label": "Catalog"},
-            {"key": "schema", "label": "Schema"},
-            {"key": "tableName", "label": "Table Name"},
+            {"key": "accessToken", "label": "Personal Access Token", "kind": "password"},
         ]
     },
+    "rest-api": {
+        "fields": [
+            {"key": "baseUrl", "label": "API Base URL"},
+            {"key": "authType", "label": "Authentication Type"},
+            {"key": "tokenValue", "label": "Token Value", "kind": "password"},
+            {"key": "username", "label": "Username"},
+            {"key": "password", "label": "Password", "kind": "password"},
+        ]
+    },
+    "goldengate": {"fields": []},
 }
 
 
+_CONNECTION_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+_SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _assert_connection_id(connection_id: str) -> None:
+    if not _CONNECTION_ID_RE.fullmatch(connection_id or ""):
+        raise HTTPException(status_code=400, detail="invalid connection_id")
+
+
+def _safe_filename(name: str, connection_id: str) -> str:
+    cleaned = _SAFE_NAME_RE.sub("-", (name or "").strip()).strip("-")
+    if not cleaned:
+        cleaned = "connection"
+    cleaned = cleaned[:80]
+    return f"{cleaned}__{connection_id}.json"
+
+
 def _load_connections() -> list[dict[str, Any]]:
-    path = _connections_file()
-    if not path.exists():
+    out_dir = _connections_dir()
+    if not out_dir.exists():
         return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        return payload.get("connections", [])
-    except Exception:
-        return []
+    items: list[dict[str, Any]] = []
+    for p in sorted(out_dir.glob("*.json")):
+        if p.name == "connection_types.json":
+            continue
+        try:
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(payload, dict) and payload.get("id"):
+                items.append(payload)
+        except Exception:
+            continue
+    return items
 
 
-def _write_connections(items: list[dict[str, Any]]) -> None:
+def _find_connection_file_by_id(connection_id: str) -> Path | None:
+    out_dir = _connections_dir()
+    if not out_dir.exists():
+        return None
+    for p in out_dir.glob("*.json"):
+        if p.name == "connection_types.json":
+            continue
+        try:
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            if payload.get("id") == connection_id:
+                return p
+        except Exception:
+            continue
+    return None
+
+
+def _write_connection(doc: ConnectionDocument) -> None:
     out_dir = _connections_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
-    tmp_path = _connections_file().with_suffix(".tmp")
-    payload = {"connections": items}
+    out_path = _connections_file(_safe_filename(doc.name, doc.id))
+    existing_path = _find_connection_file_by_id(doc.id)
+    if existing_path and existing_path.resolve() != out_path.resolve():
+        try:
+            existing_path.replace(out_path)
+        except Exception:
+            pass
+    tmp_path = out_path.with_suffix(".tmp")
+    payload = doc.model_dump()
     tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    tmp_path.replace(_connections_file())
+    tmp_path.replace(out_path)
 
 
 def _load_schema() -> dict[str, Any]:
@@ -148,37 +187,35 @@ async def get_connection_schema() -> dict[str, Any]:
 
 @router.get("/connections/{connection_id}")
 async def get_connection(connection_id: str) -> dict[str, Any]:
-    items = _load_connections()
-    for item in items:
-        if item.get("id") == connection_id:
-            return item
-    raise HTTPException(status_code=404, detail="connection not found")
+    _assert_connection_id(connection_id)
+    path = _find_connection_file_by_id(connection_id)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="connection not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"failed to read connection: {e}") from e
 
 
 @router.put("/connections/{connection_id}")
 async def save_connection(connection_id: str, doc: ConnectionDocument) -> dict[str, Any]:
+    _assert_connection_id(connection_id)
     if doc.id != connection_id:
         raise HTTPException(status_code=400, detail="connection_id mismatch")
-    items = _load_connections()
-    updated = False
-    for idx, item in enumerate(items):
-        if item.get("id") == connection_id:
-            items[idx] = doc.model_dump()
-            updated = True
-            break
-    if not updated:
-        items.append(doc.model_dump())
-    _write_connections(items)
+    _write_connection(doc)
     return {"ok": True, "id": connection_id}
 
 
 @router.delete("/connections/{connection_id}")
 async def delete_connection(connection_id: str) -> dict[str, Any]:
-    items = _load_connections()
-    next_items = [i for i in items if i.get("id") != connection_id]
-    if len(next_items) == len(items):
+    _assert_connection_id(connection_id)
+    path = _find_connection_file_by_id(connection_id)
+    if not path or not path.exists():
         return {"ok": True, "deleted": False}
-    _write_connections(next_items)
+    try:
+        path.unlink()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"failed to delete connection: {e}") from e
     return {"ok": True, "deleted": True}
 
 
@@ -309,24 +346,27 @@ async def test_connection(req: ConnectionTestRequest) -> ConnectionTestResponse:
             return ConnectionTestResponse(ok=True, message="jdbc oracle connection ok")
 
         if node_type == "rest-api":
-            endpoint = str(cfg.get("endpoint") or "")
-            if not endpoint:
-                raise RuntimeError("rest-api.endpoint is required")
+            base_url = str(cfg.get("baseUrl") or "")
+            if not base_url:
+                raise RuntimeError("rest-api.baseUrl is required")
             auth_type = str(cfg.get("authType") or "").lower()
             username = str(cfg.get("username") or "")
             password = str(cfg.get("password") or "")
             headers: dict[str, str] = {}
             auth: Any = None
-            if auth_type == "basic" and username and password and not _masked(password):
+            if auth_type == "basic":
+                if not username or not password:
+                    raise RuntimeError("rest-api.username and rest-api.password are required for basic auth")
                 auth = (username, password)
-            if auth_type == "bearer":
-                token = str(cfg.get("clientSecret") or cfg.get("accessToken") or "")
+            if auth_type == "token":
+                token = str(cfg.get("tokenValue") or "")
                 if _masked(token):
                     token = os.getenv("BACKEND_REST_API_BEARER_TOKEN", "")
-                if token:
-                    headers["Authorization"] = f"Bearer {token}"
+                if not token:
+                    raise RuntimeError("rest-api.tokenValue is required for token auth")
+                headers["Authorization"] = f"Bearer {token}"
             async with httpx.AsyncClient(timeout=20.0) as client:
-                r = await client.get(endpoint, params={"limit": 1, "offset": 0}, headers=headers, auth=auth)
+                r = await client.get(base_url, params={"limit": 1, "offset": 0}, headers=headers, auth=auth)
                 if r.status_code >= 400:
                     raise RuntimeError(f"HTTP {r.status_code}: {r.text[:300]}")
             return ConnectionTestResponse(ok=True, message="rest api reachable")
@@ -360,45 +400,22 @@ async def test_connection(req: ConnectionTestRequest) -> ConnectionTestResponse:
             return ConnectionTestResponse(ok=True, message="output path writable")
 
         if node_type == "goldengate":
-            install = str(cfg.get("installPath") or "")
-            trail = str(cfg.get("trailFileLocation") or "")
-            if not install:
-                raise RuntimeError("goldengate.installPath is required")
-            if not Path(install).expanduser().exists():
-                raise RuntimeError("goldengate.installPath not found on backend host")
-            if trail and not Path(trail).expanduser().exists():
-                raise RuntimeError("goldengate.trailFileLocation not found on backend host")
-            return ConnectionTestResponse(ok=True, message="goldengate paths ok")
+            return ConnectionTestResponse(ok=True, message="goldengate ok")
 
         if node_type == "cloud-storage":
-            storage_type = str(cfg.get("storageType") or "").lower()
-            if storage_type in ("", "adls"):
-                account = str(cfg.get("accountName") or "")
-                key = str(cfg.get("accessKey") or "")
-                container = str(cfg.get("container") or "")
-                if _masked(key):
-                    key = os.getenv("BACKEND_ADLS_ACCESS_KEY", "")
-                if not account:
-                    raise RuntimeError("cloud-storage.accountName is required for ADLS")
-                if not key:
-                    raise RuntimeError("cloud-storage.accessKey is required for ADLS (or set BACKEND_ADLS_ACCESS_KEY)")
-                if not container:
-                    raise RuntimeError("cloud-storage.container is required for ADLS")
+            account = str(cfg.get("accountName") or "")
+            key = str(cfg.get("accessKey") or "")
+            container = str(cfg.get("container") or "")
+            if _masked(key):
+                key = os.getenv("BACKEND_ADLS_ACCESS_KEY", "")
+            if not account:
+                raise RuntimeError("cloud-storage.accountName is required for ADLS")
+            if not key:
+                raise RuntimeError("cloud-storage.accessKey is required for ADLS (or set BACKEND_ADLS_ACCESS_KEY)")
+            if container:
                 await _test_adls_container_list(account, key, container)
                 return ConnectionTestResponse(ok=True, message="adls container list ok")
-
-            if storage_type == "local":
-                base = str(cfg.get("path") or "")
-                if not base:
-                    raise RuntimeError("cloud-storage.path is required for local")
-                p = Path(base).expanduser()
-                p.mkdir(parents=True, exist_ok=True)
-                test_file = p / f".local_write_test_{os.getpid()}.tmp"
-                test_file.write_text("ok", encoding="utf-8")
-                test_file.unlink(missing_ok=True)
-                return ConnectionTestResponse(ok=True, message="local path writable")
-
-            raise RuntimeError(f"storageType '{storage_type}' connection test not implemented")
+            return ConnectionTestResponse(ok=True, message="adls credentials stored")
 
         return ConnectionTestResponse(ok=False, message=f"unknown nodeType: {node_type}")
     except Exception as e:

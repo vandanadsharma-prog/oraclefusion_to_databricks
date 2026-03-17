@@ -110,7 +110,8 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
         style={{
           position: 'absolute',
           left: 12,
-          bottom: 4,
+          top: '50%',
+          transform: 'translateY(-50%)',
           display: 'flex',
           alignItems: 'center',
           gap: '6px',

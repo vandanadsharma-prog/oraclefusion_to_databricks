@@ -15,13 +15,17 @@ async def run_rest_api(manager: RunManager, state: RunState, req: PipelineRunReq
     if not api:
         raise RuntimeError("missing rest-api node")
 
-    endpoint = str(getattr(api.config, "endpoint", ""))
-    if not endpoint:
-        raise RuntimeError("rest-api endpoint is required")
+    base_url = str(getattr(api.config, "baseUrl", ""))
+    if not base_url:
+        raise RuntimeError("rest-api baseUrl is required")
 
     page_size = int(getattr(api.config, "pageSize", 200) or 200)
     filter_param = str(getattr(api.config, "filterParam", "lastUpdateDate") or "lastUpdateDate")
     filter_value = str(getattr(api.config, "filterValue", "") or "")
+    auth_type = str(getattr(api.config, "authType", "") or "").lower()
+    username = str(getattr(api.config, "username", "") or "")
+    password = str(getattr(api.config, "password", "") or "")
+    token_value = str(getattr(api.config, "tokenValue", "") or "")
 
     await log(manager, state.run_id, "info", "===================================================")
     await log(manager, state.run_id, "info", "  Pipeline started: REST-API pattern")
@@ -41,8 +45,14 @@ async def run_rest_api(manager: RunManager, state: RunState, req: PipelineRunReq
             params: dict[str, Any] = {"limit": page_size, "offset": offset}
             if filter_value:
                 params[filter_param] = filter_value
+            headers: dict[str, str] = {}
+            auth: Any = None
+            if auth_type == "basic" and username and password:
+                auth = (username, password)
+            if auth_type == "token" and token_value:
+                headers["Authorization"] = f"Bearer {token_value}"
 
-            r = await client.get(endpoint, params=params)
+            r = await client.get(base_url, params=params, headers=headers, auth=auth)
             r.raise_for_status()
             payload = r.json()
             items = payload.get("items", [])
@@ -65,4 +75,3 @@ async def run_rest_api(manager: RunManager, state: RunState, req: PipelineRunReq
     await progress(manager, state.run_id, 100)
 
     return {"rowsExtracted": total, "rowsLoaded": total, "pipelineType": "rest-api"}
-

@@ -11,6 +11,8 @@ const TYPE_META: Record<ConnectionType, { label: string; icon: React.ReactNode }
   jdbc: { label: 'JDBC', icon: <Server size={14} /> },
   'cloud-storage': { label: 'ADLS', icon: <Cloud size={14} /> },
   databricks: { label: 'Databricks', icon: <Globe size={14} /> },
+  'rest-api': { label: 'REST API', icon: <Globe size={14} /> },
+  goldengate: { label: 'Oracle GoldenGate', icon: <PlugZap size={14} /> },
 };
 
 const FIELD_STYLE: React.CSSProperties = {
@@ -90,12 +92,16 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
   const save = async () => {
     if (!draft) return;
     setSaving(true);
+    const normalizedConfig =
+      draft.type === 'rest-api' && !(draft.config as any)?.authType
+        ? { ...(draft.config ?? {}), authType: 'token' }
+        : draft.config;
     const id = await saveConnection({
       ...draft,
       id: draft.id || undefined,
       type: draft.type,
       name: draft.name,
-      config: draft.config,
+      config: normalizedConfig,
     });
     setSaving(false);
     if (id) {
@@ -202,24 +208,59 @@ export function ConnectionsTab({ autoNew }: { autoNew?: boolean }) {
                   <option value="bicc">BICC</option>
                   <option value="cloud-storage">ADLS</option>
                   <option value="databricks">Databricks</option>
+                  <option value="rest-api">Rest API</option>
+                  <option value="goldengate">Oracle GoldenGate</option>
                 </select>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {(schema?.[draft.type]?.fields ?? []).map((f: ConnectionField) => {
-                const value = (draft.config as any)?.[f.key];
-                const type = f.kind === 'password' ? 'password' : f.kind === 'number' ? 'number' : 'text';
-                return (
-                  <div key={f.key} style={{ gridColumn: 'span 1' }}>
-                    {labeledInput(f.label, value, (v) => updateConfig({ [f.key]: type === 'number' ? Number(v) : v }), {
-                      type,
-                      placeholder: f.placeholder,
-                    })}
+            {draft.type === 'rest-api' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {labeledInput('API Base URL', (draft.config as any)?.baseUrl, (v) => updateConfig({ baseUrl: v }))}
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em', ...font }}>
+                    Authentication Type
                   </div>
-                );
-              })}
-            </div>
+                  <select
+                    value={(draft.config as any)?.authType ?? 'token'}
+                    onChange={(e) => updateConfig({ authType: e.target.value as any })}
+                    style={{ ...FIELD_STYLE, cursor: 'pointer' }}
+                  >
+                    <option value="token">Token</option>
+                    <option value="basic">Username & Password</option>
+                  </select>
+                </div>
+                {(draft.config as any)?.authType !== 'basic' && (
+                  labeledInput('Token Value', (draft.config as any)?.tokenValue, (v) => updateConfig({ tokenValue: v }), { type: 'password' })
+                )}
+                {(draft.config as any)?.authType === 'basic' && (
+                  <>
+                    {labeledInput('Username', (draft.config as any)?.username, (v) => updateConfig({ username: v }))}
+                    {labeledInput('Password', (draft.config as any)?.password, (v) => updateConfig({ password: v }), { type: 'password' })}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {(schema?.[draft.type]?.fields ?? []).map((f: ConnectionField) => {
+                  const value = (draft.config as any)?.[f.key];
+                  const type = f.kind === 'password' ? 'password' : f.kind === 'number' ? 'number' : 'text';
+                  return (
+                    <div key={f.key} style={{ gridColumn: 'span 1' }}>
+                      {labeledInput(f.label, value, (v) => updateConfig({ [f.key]: type === 'number' ? Number(v) : v }), {
+                        type,
+                        placeholder: f.placeholder,
+                      })}
+                    </div>
+                  );
+                })}
+                {(schema?.[draft.type]?.fields ?? []).length === 0 && (
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                    No connection fields required for this type.
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
               <button

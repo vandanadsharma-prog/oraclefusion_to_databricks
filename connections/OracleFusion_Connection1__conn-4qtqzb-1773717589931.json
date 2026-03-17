@@ -1,0 +1,13 @@
+{
+  "id": "conn-4qtqzb-1773717589931",
+  "name": "OracleFusion_Connection1",
+  "type": "oracle-fusion",
+  "config": {
+    "username": "PDB_ADMIN",
+    "password": "YourStrongPassword",
+    "host": "localhost",
+    "port": "1521",
+    "serviceName": "PDB2"
+  },
+  "updatedAtMs": 1773717589931
+}

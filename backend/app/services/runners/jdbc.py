@@ -39,6 +39,7 @@ async def run_jdbc(manager: RunManager, state: RunState, req: PipelineRunRequest
     username = str(getattr(jdbc.config, "username", getattr(src.config, "username", "")) or "")
     password = str(getattr(jdbc.config, "password", getattr(src.config, "password", "")) or "")
     query = str(getattr(jdbc.config, "query", "") or "")
+    row_limit = getattr(jdbc.config, "rowLimit", None)
 
     if "•" in password:
         password = os.getenv("BACKEND_ORACLE_PASSWORD", "")
@@ -69,7 +70,11 @@ async def run_jdbc(manager: RunManager, state: RunState, req: PipelineRunRequest
     rows = 0
     try:
         cur = conn.cursor()
-        cur.execute(query)
+        if isinstance(row_limit, int) and row_limit > 0:
+            limited = f"SELECT * FROM ({query}) WHERE ROWNUM <= :row_limit"
+            cur.execute(limited, row_limit=row_limit)
+        else:
+            cur.execute(query)
         while True:
             if stop_requested(state):
                 raise RuntimeError("stopped")
