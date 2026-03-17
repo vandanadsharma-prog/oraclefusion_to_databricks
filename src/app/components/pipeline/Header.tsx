@@ -39,7 +39,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       }}
     >
       {/* Brand identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '64px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '100px' }}>
         <OracleLogo size={22} />
         <ChevronRight size={14} style={{ color: '#94a3b8' }} />
         <DatabricksLogo size={22} />
@@ -54,7 +54,7 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '32px' }}>
         {[
           { id: 'pipelines' as const, label: 'Pipelines', Icon: FolderGit2 },
           { id: 'connections' as const, label: 'Connections', Icon: Plug },
@@ -109,15 +109,15 @@ export function Header({ tab, onTabChange }: { tab: AppTab; onTabChange: (t: App
       <div
         style={{
           position: 'absolute',
-          left: 10,
-          bottom: 6,
+          left: 12,
+          bottom: 4,
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
           pointerEvents: 'none',
         }}
       >
-        <img src={InfoBeansLogo} alt="InfoBeans" style={{ height: 44, width: 'auto', objectFit: 'contain' }} />
+        <img src={InfoBeansLogo} alt="InfoBeans" style={{ height: 32, width: 100, objectFit: 'contain' }} />
       </div>
 
       {/* Running progress */}
